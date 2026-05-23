@@ -22,6 +22,7 @@ import {
 } from "lucide-react";
 import { Question, ExamMode, ExamSession } from "./types";
 import { examQuestions } from "./questions";
+import DbtMeshVisualizer from "./components/DbtMeshVisualizer";
 
 export default function App() {
   // Screens state
@@ -112,10 +113,7 @@ export default function App() {
     let selectedQuestionsList: Question[] = [];
 
     if (mode === "MOCK_EXAM") {
-      // Real exam standard: 65 questions (we'll stretch our repository list by repeating or sampling dynamically if smaller,
-      // but to provide a cohesive experience, we will offer all 20 high-quality tailored exam questions arranged with realistic weighting).
-      // Since our static file contains 20 curated high quality topics, we will run standard tests with these curated questions.
-      // We will present them in randomized or fixed sequence. Let's make it fixed/slightly randomized based on categories.
+      // Shuffled complete database of 100+ pro-grade certification questions for maximum comprehensiveness. No sampling or cutting.
       selectedQuestionsList = [...examQuestions].sort(() => Math.random() - 0.5);
       setTimeLeft(120 * 60); // 120 minutes (7,200 seconds) countdown
     } else if (mode === "QUICK_QUIZ") {
@@ -322,7 +320,7 @@ export default function App() {
                       </div>
                       <h3 className="font-bold text-gray-900 text-md mb-1">Full Mock Exam</h3>
                       <p className="text-xs text-gray-600 leading-relaxed mb-4">
-                        65 randomized curated syllabus questions under a proctored 120-minute ticking exam simulator. No instant answer hints.
+                        Comprehensive practice with the complete database of 100+ expert certification questions, shuffled under a proctored 120-minute simulator. No instant answer hints.
                       </p>
                     </div>
                     <button
@@ -529,6 +527,9 @@ export default function App() {
                         <li><strong>Model Versioning:</strong> Handling deprecation dates (<code>deprecated_at</code>) and defining separate active version releases.</li>
                         <li><strong>Semantic Layer:</strong> Designing metrics using MetricFlow standards based on dimensions, entities, measures, and expressions.</li>
                       </ul>
+
+                      {/* Interactive visual component illustrating cross-project refs */}
+                      <DbtMeshVisualizer />
                     </div>
                   )}
 
