@@ -133,7 +133,7 @@ select * from {{ ref('stg_payments') }}`,
     codeLanguage: "sql",
     options: [
       "The model must include an `is_incremental()` filter, or each batch scans the full source table.",
-      "dbt filters inputs that have `event_time` configured for each batch, so the model needs no `is_incremental()` filter.",
+      "dbt filters each batch on the inputs that set `event_time`, so no `is_incremental()` filter is needed.",
       "dbt runs one query for the whole lookback window and the model must filter `payment_date` itself.",
       "dbt applies the batch filter only to `source()` inputs, so a `ref()` input is always read in full."
     ],
@@ -146,12 +146,17 @@ select * from {{ ref('stg_payments') }}`,
     id: 8,
     category: "Debug Data Models",
     difficulty: "Advanced",
-    questionText: "In a multi-project dbt Mesh setup, a downstream marketing project references a model in the upstream core finance project, and compilation fails because the model cannot be referenced across projects. What is the most likely cause?",
-    codeSnippet: `In Core Finance project schema.yml:
+    questionText: "In a multi-project dbt Mesh setup, a downstream marketing project references `fct_earnings` from the upstream core finance project, and compilation fails because the model cannot be referenced across projects. The model's properties in the upstream project are shown below. What is the most likely cause?",
+    codeSnippet: `# core_finance project: models/marts/_marts.yml
 models:
   - name: fct_earnings
+    description: "Recognized earnings per account and month"
     config:
-      access: private  # Or missing access configuration`,
+      materialized: view
+    columns:
+      - name: account_id
+      - name: earnings_month
+      - name: earnings_amount`,
     codeLanguage: "yaml",
     options: [
       "`fct_earnings` is materialized as a view, and cross-project refs require tables.",
@@ -160,7 +165,7 @@ models:
       "The downstream project does not set `access: public` in its own `dbt_project.yml`."
     ],
     correctAnswers: [1],
-    explanation: "CORRECT ACTION:\nOnly models with `access: public` can be referenced from another project. A model that is `private` or `protected` is limited to its own project, so the model needs `access: public` in the upstream project.\n\nINCORRECT COMPETING OPTIONS:\n- View materialization: public models can use any persisted materialization, and the failure is about access, not materialization.\n- Missing `group`: a `group` is not required for a model to be public.\n- `access: public` in the downstream project: `access` is set on the model being referenced, so the downstream project's own configuration does not change it.",
+    explanation: "CORRECT ACTION:\nOnly models with `access: public` can be referenced from another project. `fct_earnings` sets no `access`, so it gets the default, `protected`, which limits references to its own project. Setting `access: public` on the model in the upstream project allows the cross-project reference.\n\nINCORRECT COMPETING OPTIONS:\n- View materialization: a public model can be materialized as a view, and the failure is about access, not materialization.\n- Missing `group`: a `group` is not required for a model to be public.\n- `access: public` in the downstream project: `access` is set on the model being referenced, so the downstream project's own configuration does not change it.",
     references: "https://docs.getdbt.com/docs/mesh/govern/model-access",
     dbtVersionFocus: "v1.7+ (dbt Mesh)"
   },
@@ -168,7 +173,7 @@ models:
     id: 9,
     category: "Debug Data Models",
     difficulty: "Intermediate",
-    questionText: "An analytics engineer runs `dbt run` and it fails with the error below. What is the root cause, and how can it be resolved?",
+    questionText: "An analytics engineer runs `dbt run` and it fails with the error below. Which change resolves it?",
     codeSnippet: `Compilation Error
   dbt found two resources with the database representation "analytics.dim_products".
   dbt cannot create two resources with identical database representations. To fix this,
@@ -177,13 +182,13 @@ models:
   - model.shop.dim_products_legacy (models/legacy/dim_products_legacy.sql)`,
     codeLanguage: "text",
     options: [
-      "Two models write to `analytics.dim_products`; setting a unique `alias` on one of the two models resolves it.",
-      "The model changed from a view to a table while the old view exists; running `dbt run --full-refresh` resolves it.",
-      "A macro in `macros/` creates a second `dim_products` relation; deleting that macro and re-running `dbt run` resolves it.",
-      "The `dim_products` table is incremental and its columns changed; setting `on_schema_change: sync_all_columns` resolves it."
+      "Set a different `alias` on one of the two models.",
+      "Set `full_refresh: true` on one of the two models.",
+      "Set `materialized: view` on one of the two models.",
+      "Set `on_schema_change: sync_all_columns` on one of the two models."
     ],
     correctAnswers: [0],
-    explanation: "CORRECT ACTION:\nThe error means two dbt resources resolve to the same database, schema and identifier. Giving one of them a different `alias` (or schema) makes the relations distinct.\n\nINCORRECT COMPETING OPTIONS:\n- View changed to table with `--full-refresh`: the error names two dbt resources, not an existing relation of another type, and dbt replaces a view with a table by itself.\n- Macro creating a second relation: the error lists two models, and macros do not create relations on their own during `dbt run`.\n- `on_schema_change: sync_all_columns`: this setting handles column changes in incremental models, not two resources sharing one relation name.",
+    explanation: "CORRECT ACTION:\nThe error means two dbt resources resolve to the same database, schema and identifier. A model's identifier comes from its `alias`, so giving one of the two models a different `alias` (or schema) makes the relations distinct.\n\nINCORRECT COMPETING OPTIONS:\n- `full_refresh: true`: this controls whether dbt rebuilds the model from scratch, and both models still resolve to the same relation.\n- `materialized: view`: the materialization does not change the relation name, so both models still resolve to `analytics.dim_products`.\n- `on_schema_change: sync_all_columns`: this setting handles column changes in incremental models, not two resources sharing one relation name.",
     references: "https://docs.getdbt.com/docs/build/materializations",
     dbtVersionFocus: "Core"
   },
@@ -191,15 +196,18 @@ models:
     id: 10,
     category: "Deploy dbt Projects",
     difficulty: "Advanced",
-    questionText: "To keep development and production environments isolated, which implementation override for the macro `generate_schema_name` correctly uses the custom schema when running in production, while defaulting to the user's primary target schema name during development?",
-    codeSnippet: `{% macro generate_schema_name(custom_schema_name, node) -%}
-    {%- if target.name == 'prod' and custom_schema_name is not none -%}
-        {{ custom_schema_name | trim }}
-    {%- else -%}
-        {{ target.schema }}
-    {%- endif -%}
-{%- endmacro %}`,
-    codeLanguage: "sql",
+    questionText: "Models in `models/marketing/` set `+schema: marketing`, and the project uses the built-in `generate_schema_name`. They currently build in the schemas shown below. You want them built in `marketing` in production and in the developer's own target schema, such as `dbt_alice`, in development. Which approach achieves this?",
+    codeSnippet: `# dbt_project.yml
+models:
+  shop:
+    marketing:
+      +schema: marketing
+
+# Schemas built today
+# target   target.schema   models/marketing builds in
+# dev      dbt_alice       dbt_alice_marketing
+# prod     analytics       analytics_marketing`,
+    codeLanguage: "yaml",
     options: [
       "Set a different `schema` for each target in `profiles.yml`, because `generate_schema_name` cannot be overridden.",
       "Override `generate_schema_name` to return `custom_schema_name` when `target.name` is `prod` and `target.schema` otherwise.",
@@ -217,13 +225,13 @@ models:
     difficulty: "Intermediate",
     questionText: "An analytics engineer has set up both generic column tests and the new dbt v1.8 unit tests on their models. They want to execute ONLY the unit tests across their entire project to keep build cycles rapid during development. Which command correctly performs this filtered execution?",
     options: [
-      "`dbt test --select \"test_type:generic\"`",
-      "`dbt test --select \"test_type:singular\"`",
+      "`dbt test --select \"test_name:unit\"`",
+      "`dbt test --select \"tag:unit\"`",
       "`dbt test --select \"test_type:unit\"`",
-      "`dbt test --select \"test_type:data\"`"
+      "`dbt test --select \"resource_type:unit\"`"
     ],
     correctAnswers: [2],
-    explanation: "CORRECT ACTION:\nThe `test_type:unit` selector matches only unit tests, so `dbt test --select \"test_type:unit\"` runs them and nothing else. Data tests, both generic and singular, are not selected.\n\nINCORRECT COMPETING OPTIONS:\n- `test_type:generic`: this runs only the generic data tests defined in YAML or by macros, and no unit tests.\n- `test_type:singular`: this runs only the SQL data tests stored in `tests/`, and no unit tests.\n- `test_type:data`: this selects both generic and singular data tests, which excludes unit tests.",
+    explanation: "CORRECT ACTION:\nThe `test_type` method selects tests by their type: `unit` for unit tests, and `data`, `generic` or `singular` for data tests. `dbt test --select \"test_type:unit\"` runs the unit tests and nothing else.\n\nINCORRECT COMPETING OPTIONS:\n- `test_name:unit`: `test_name` selects data tests by the name of the generic test that defines them, such as `unique` or `not_null`, so it does not select unit tests.\n- `tag:unit`: this selects only resources that have the tag `unit`, whatever kind of test or model they are.\n- `resource_type:unit`: `unit` is not a resource type; the resource type of a unit test is `unit_test`.",
     references: "https://docs.getdbt.com/docs/build/unit-tests#running-unit-tests",
     dbtVersionFocus: "v1.8+ (Unit Testing)"
   },
@@ -250,17 +258,6 @@ models:
     category: "Test and Document Models",
     difficulty: "Basic",
     questionText: "To monitor raw data feeds arriving from an external pipeline, you want dbt to alert you if a table has not been updated in the last 24 hours. Where and how should this be configured?",
-    codeSnippet: `sources:
-  - name: internal_sales
-    database: raw
-    schema: sales
-    tables:
-      - name: orders
-        freshness:
-          warn_after: {count: 12, period: hour}
-          error_after: {count: 24, period: hour}
-        loaded_at_field: created_at`,
-    codeLanguage: "yaml",
     options: [
       "Add `freshness` with `error_after` of 24 hours to the source table and run `dbt run`.",
       "Add `freshness` and a `loaded_at_field` to the source table and run `dbt source freshness`.",
@@ -338,16 +335,16 @@ dbt run --vars '{"source_database": "raw_sales_dev"}'`,
     id: 17,
     category: "Develop Models",
     difficulty: "Advanced",
-    questionText: "Your organization uses dbt groups to restrict visibility. You have a finance model named `fct_salary` classified with an access scope and restricted to a group named `internal_finance`. Which model can successfully reference `fct_salary` via Jinja's `{{ ref() }}`?",
+    questionText: "Your organization uses dbt groups and model access. The finance model `fct_salary` is configured as shown below. Which models can reference `fct_salary` with `{{ ref() }}`?",
     codeSnippet: `models:
   - name: fct_salary
     config:
       group: internal_finance
-      access: private # What can call this model?`,
+      access: private`,
     codeLanguage: "yaml",
     options: [
       "Any model in the same project can reference it, whatever its group.",
-      "Only models in the `internal_finance` group can reference it.",
+      "Only models in the same group as `fct_salary` can reference it.",
       "Only models in the same folder as `fct_salary` can reference it.",
       "Only models in downstream projects can reference it through `ref`."
     ],
@@ -395,15 +392,15 @@ select * from {{ ref('raw_source') }}`,
     id: 20,
     category: "Deploy dbt Projects",
     difficulty: "Basic",
-    questionText: "You are setting up a `dbt run` inside standard scheduling software. You want your jobs to clear old local artifacts, fetch external packages, and then build your models. Which sequence of dbt commands is correct?",
+    questionText: "A scheduled job must run `dbt build`, `dbt clean` and `dbt deps` so that each run starts without stale artifacts and builds with the packages listed in `packages.yml`. The project's `dbt_project.yml` sets `clean-targets: [target, dbt_packages]`. In which order should the job run the three commands?",
     options: [
-      "`dbt run` -> `dbt test` -> `dbt docs generate`",
+      "`dbt clean` -> `dbt build` -> `dbt deps`",
       "`dbt clean` -> `dbt deps` -> `dbt build`",
       "`dbt deps` -> `dbt clean` -> `dbt build`",
       "`dbt build` -> `dbt deps` -> `dbt clean`"
     ],
     correctAnswers: [1],
-    explanation: "CORRECT ACTION:\n`dbt clean` deletes the folders listed in `clean-targets`, which by default are `target/` and `dbt_packages/`. `dbt deps` then installs the packages from `packages.yml`, and `dbt build` runs the models, tests, seeds and snapshots.\n\nINCORRECT COMPETING OPTIONS:\n- `dbt run`, `dbt test`, `dbt docs generate`: no step installs packages or clears old artifacts before the build.\n- `dbt deps` before `dbt clean`: `dbt clean` deletes `dbt_packages/` by default, which removes the packages that were just installed.\n- `dbt build` before `dbt deps`: the build runs before the packages are installed, so it fails if the project uses any package.",
+    explanation: "CORRECT ACTION:\n`dbt clean` deletes the folders listed in `clean-targets`, here `target/` and `dbt_packages/`. `dbt deps` then installs the packages from `packages.yml`, and `dbt build` runs the models, tests, seeds and snapshots with those packages available.\n\nINCORRECT COMPETING OPTIONS:\n- `dbt build` right after `dbt clean`: `dbt clean` has just deleted `dbt_packages/`, so the build fails if the project uses any package.\n- `dbt deps` before `dbt clean`: with `dbt_packages` in `clean-targets`, `dbt clean` removes the packages that were just installed.\n- `dbt build` before `dbt deps`: the build runs before the packages are installed, so it fails if the project uses any package.",
     references: "https://docs.getdbt.com/reference/dbt-commands",
     dbtVersionFocus: "Core"
   },
@@ -437,20 +434,10 @@ select * from {{ ref('raw_source') }}`,
     id: 22,
     category: "Develop Models",
     difficulty: "Advanced",
-    questionText: "The Semantic Layer and MetricFlow support conversion metrics to measure when a user performs a conversion event after an initial base event. Which YAML structure represents the correct definition for a conversion metric?",
-    codeSnippet: `metrics:
-  - name: user_signup_to_purchase_conversion
-    type: conversion
-    type_params:
-      conversion_type_params:
-        entity: user
-        base_measure: user_signups
-        conversion_measure: user_purchases
-        window: 7 days`,
-    codeLanguage: "yaml",
+    questionText: "You want a Semantic Layer metric that measures how many users who sign up go on to make a purchase within seven days of signing up. Which YAML structure defines this metric?",
     options: [
       "Set `type: ratio` and define `numerator` and `denominator` measures with a `window` of 7 days.",
-      "Set `type: conversion` and define `entity`, `base_measure`, `conversion_measure` and `window` under `conversion_type_params`.",
+      "Set `type: conversion` with `entity`, `base_measure` and `conversion_measure` in `conversion_type_params`.",
       "Set `type: cumulative` and define a `measure` with a `window` under `cumulative_type_params`.",
       "Set `type: simple` and define `base_measure` and `conversion_measure` directly under `type_params`."
     ],
@@ -479,7 +466,7 @@ select * from {{ ref('raw_source') }}`,
     id: 24,
     category: "Deploy dbt Projects",
     difficulty: "Advanced",
-    questionText: "An analytics engineer is deploying models in an isolated Dev warehouse environment. They want to compile only their modified models while using dbt's model deferral feature. When deferral is active (`--defer --state state_dir`), how does dbt handle references to unmodified upstream models during compilation?",
+    questionText: "An analytics engineer is deploying models in an isolated Dev warehouse environment. They want to compile only their modified models while using dbt's model deferral feature. None of the unmodified upstream models has been built in the Dev schema. When deferral is active (`--defer --state state_dir`), how does dbt handle references to unmodified upstream models during compilation?",
     options: [
       "It builds the unmodified upstream models in the Dev schema before compiling the modified models.",
       "It resolves them to the relations in the state `manifest.json`, typically in production.",
@@ -495,13 +482,15 @@ select * from {{ ref('raw_source') }}`,
     id: 25,
     category: "Test and Document Models",
     difficulty: "Advanced",
-    questionText: "When writing dbt Unit Tests inside YAML properties, a developer tests an incremental model that references itself recursively via the Jinja `this` block. What is the correct way to construct mock input rows representing the prior self-referred state of the table?",
-    codeSnippet: `unit_tests:
-  - name: test_recursive_incremental
-    model: my_incremental_model
-    given:
-      # mock the prior state of the table here`,
-    codeLanguage: "yaml",
+    questionText: "A developer writes a dbt unit test for the incremental branch of the model below. What is the correct way to supply mock rows for the rows already in the table?",
+    codeSnippet: `-- models/my_incremental_model.sql
+{{ config(materialized='incremental', unique_key='event_id') }}
+
+select * from {{ ref('stg_events') }}
+{% if is_incremental() %}
+where event_at > (select max(event_at) from {{ this }})
+{% endif %}`,
+    codeLanguage: "sql",
     options: [
       "Add a `given` input of `ref('my_incremental_model')` with rows for the existing table.",
       "Add a `given` input named `this` with rows representing the existing table.",
@@ -552,7 +541,7 @@ select * from {{ ref('raw_source') }}`,
     questionText: "A dbt project needs to write tables to different warehouse databases depending on the active target environment. Which approach customizes how dbt chooses the database for a model?",
     options: [
       "Override `generate_schema_name` in the project so that it also returns the database name.",
-      "Override `generate_database_name` in the project's `macros` directory and return `custom_database_name` when it is set.",
+      "Override `generate_database_name` in the project to return `custom_database_name` when it is set.",
       "Override `generate_alias_name` in the project so that it returns the custom database name.",
       "Set `database` in each output in `profiles.yml`, since dbt then ignores any `+database` config."
     ],
@@ -616,7 +605,7 @@ select * from {{ ref('raw_source') }}`,
     questionText: "To avoid cluttering schema YAML files with very long, multi-line paragraph descriptions of dbt models or columns, which feature should you use to separate descriptions into clean dedicated markdown files?",
     options: [
       "Use YAML anchors to reuse the description text across the properties files.",
-      "Use doc blocks: `{% docs name %}` in a `.md` file, referenced with `{{ doc('name') }}`.",
+      "Use doc blocks written in `.md` files and reference them with the `doc()` function in YAML.",
       "Use the `docs` config in `dbt_project.yml` to point each model at a `.md` file.",
       "Use `persist_docs` to read the descriptions from `.md` files in the `models` directory."
     ],
@@ -649,7 +638,7 @@ select * from {{ ref('raw_source') }}`,
     difficulty: "Advanced",
     questionText: "When setting up Type II slowly changing dimensions in dbt using a snapshot `check` strategy, how does dbt evaluate changes if `check_cols` is configured with a list of values, and what is the behavior if any value changes to null?",
     options: [
-      "dbt compares each column in `check_cols` and inserts a new row when any value changes, including to or from null.",
+      "dbt compares each column in `check_cols` and inserts a new row when any value changes, nulls included.",
       "dbt compares each column in `check_cols` and ignores any value that changes to or from null.",
       "dbt compares only the first column in `check_cols` and inserts a new row when it changes.",
       "dbt compares each column in `check_cols` and overwrites the existing row when any value changes."
@@ -695,15 +684,15 @@ select * from {{ ref('raw_source') }}`,
     id: 37,
     category: "Test and Document Models",
     difficulty: "Intermediate",
-    questionText: "By default, if a generic column test fails, dbt halts build runs and reports a severe error. How can a developer customize a test inside schema YAML properties so meeting failure counts does not immediately crash dbt, but instead raises a harmless warning unless failures cross a specific threshold?",
+    questionText: "By default, a failing generic test returns an error, and in `dbt build` the nodes downstream of it are skipped. How can a developer configure the test in its YAML properties so that a few failures raise only a warning, and an error is raised only when the failures cross a set threshold?",
     options: [
-      "Use `store_failures: true` so that failing rows are saved and the test no longer stops dbt.",
-      "Use `severity: warn`, or set `warn_if` and `error_if` thresholds in the test `config`.",
+      "Use `store_failures: true` so that failing rows are saved and the test no longer returns an error.",
+      "Set `warn_if` and `error_if` thresholds in the test `config`.",
       "Use `limit` in the test `config` so that only failure counts above the limit raise an error.",
       "Use `--fail-fast` on `dbt test` so that test failures are reported as warnings."
     ],
     correctAnswers: [1],
-    explanation: "CORRECT ACTION:\nThe test `config` accepts `severity: warn` to report failures as warnings. The `warn_if` and `error_if` thresholds set how many failing rows trigger a warning and how many trigger an error, so small failure counts can pass with a warning.\n\nINCORRECT COMPETING OPTIONS:\n- `store_failures: true`: it saves the failing rows in the warehouse and does not change whether the test errors.\n- `limit`: it caps the number of failing rows returned by the test query and does not set an error threshold.\n- `--fail-fast`: it stops the run at the first failure and does not downgrade errors to warnings.",
+    explanation: "CORRECT ACTION:\nThe test `config` accepts `warn_if` and `error_if` thresholds. With the default `severity: error`, failures below the `warn_if` threshold pass, failures that meet `warn_if` but not `error_if` raise a warning, and failures that meet `error_if` raise an error, so small failure counts do not stop the run.\n\nINCORRECT COMPETING OPTIONS:\n- `store_failures: true`: it saves the failing rows in the warehouse and does not change whether the test errors.\n- `limit`: it caps the number of failing rows returned by the test query and does not set an error threshold.\n- `--fail-fast`: it stops the run at the first failure and does not downgrade errors to warnings.",
     references: "https://docs.getdbt.com/reference/resource-configs/severity",
     dbtVersionFocus: "Core"
   },
@@ -759,13 +748,13 @@ select * from {{ ref('raw_source') }}`,
     id: 41,
     category: "Develop Models",
     difficulty: "Advanced",
-    questionText: "A developer is writing a multi-platform dbt macro that needs to implement separate logic depending on whether dbt is executing on Snowflake or BigQuery. Which Jinja syntax should they use to write this conditional block, and which properties are checked?",
-    codeSnippet: `{% if target.type == 'snowflake' %}
-    select date_trunc('month', created_at)
-{% elif target.type == 'bigquery' %}
-    select date_trunc(created_at, month)
-{% endif %}`,
-    codeLanguage: "jinja",
+    questionText: "A developer is writing a cross-database macro. It must return the first expression below when dbt runs on Snowflake and the second when it runs on BigQuery. Which property should the macro check to choose between them?",
+    codeSnippet: `-- Snowflake
+date_trunc('month', created_at)
+
+-- BigQuery
+date_trunc(created_at, month)`,
+    codeLanguage: "sql",
     options: [
       "Use `env_var('DBT_WAREHOUSE')` to read the adapter type from the environment.",
       "Use `target.type` to read the active adapter type.",
@@ -797,7 +786,7 @@ select * from {{ ref('raw_source') }}`,
     id: 43,
     category: "Develop Models",
     difficulty: "Basic",
-    questionText: "Which statement accurately describes the compilation and lineage difference between referencing a raw table using the standard `source('source_name', 'table_name')` Jinja function versus referencing a model using the `ref('model_name')` function in dbt?",
+    questionText: "Which statement describes how the `source()` and `ref()` Jinja functions differ in compilation and lineage?",
     options: [
       "`source` references tables loaded outside dbt; `ref` references dbt models and sets build order.",
       "`ref` can only reference views, and `source` can only reference incremental models.",
@@ -845,7 +834,7 @@ select * from {{ ref('raw_source') }}`,
     id: 46,
     category: "Develop Models",
     difficulty: "Intermediate",
-    questionText: "A data pipeline needs to run targeting dynamic historical dates. A variable list is declared in `dbt_project.yml` under `vars`. However, the developer runs dbt with a CLI override command. How does dbt resolve the variable priority?",
+    questionText: "A project declares `cutoff_date` under `vars` in `dbt_project.yml`, and a scheduled job runs the command below. Which value does dbt use for `cutoff_date`?",
     codeSnippet: `dbt run --vars '{"cutoff_date": "2026-01-01"}'`,
     options: [
       "dbt uses the `dbt_project.yml` value and ignores the `--vars` value.",
@@ -898,9 +887,9 @@ select * from {{ ref('raw_source') }}`,
     id: 49,
     category: "Debug Data Models",
     difficulty: "Intermediate",
-    questionText: "An analytics engineer shifts a model's materialization from `view` to `table` in the SQL configuration block. However, running `dbt run` fails on some databases due to a class/relation path type mismatch. What is the root cause of this failure, and how does dbt normally mitigate this across modern adapters?",
+    questionText: "An analytics engineer changes a model's materialization from `view` to `table` in its `config()` block and runs `dbt run` while the view still exists in the warehouse. Which statement describes the risk in this change and how dbt's built-in materializations handle it?",
     options: [
-      "Connection timeouts cause the failure because databases can convert a view to a table in place; raising `connect_timeout` in `profiles.yml` resolves it.",
+      "Connection timeouts are the risk because databases convert a view to a table in place; raising `connect_timeout` in `profiles.yml` resolves it.",
       "Databases cannot replace a view with a table in place; dbt detects the type change and drops the existing relation first.",
       "The adapter cache holds stale relation metadata; running `dbt clean` before `dbt run` refreshes the cache and allows the type change.",
       "Changing materialization requires the `--full-refresh` flag; without it dbt skips the model and raises a relation type mismatch error until the flag is added."
@@ -914,12 +903,12 @@ select * from {{ ref('raw_source') }}`,
     id: 50,
     category: "Debug Data Models",
     difficulty: "Advanced",
-    questionText: "During Slim CI diagnostic checks, a developer wants to inspect the exact, fully compiled SQL query of a failing model named `stg_payments` before it gets executed. Where should they look inside the project filesystem to inspect this output?",
+    questionText: "A model named `stg_payments` in `models/staging/` fails in CI. A developer wants its `select` statement, with every `ref` and `source` resolved to a relation name, to paste into a warehouse console. Where in the project filesystem should they look?",
     options: [
-      "In `logs/dbt.log`, which stores the compiled SQL of every model as a standalone file.",
-      "In `target/compiled/<project_name>/models/staging/stg_payments.sql`, which stores the compiled SQL before execution.",
+      "In `logs/dbt.log`, which stores the rendered SQL of every model as a standalone file.",
+      "In `target/compiled/<project_name>/models/staging/stg_payments.sql`, which stores the rendered `select` statement.",
       "In `target/run/<project_name>/models/staging/stg_payments.sql`, which stores the SQL wrapped in the DDL that dbt executes.",
-      "In `target/catalog.json`, which stores the compiled SQL of every model."
+      "In `target/catalog.json`, which stores the rendered SQL of every model."
     ],
     correctAnswers: [1],
     explanation: "CORRECT ACTION:\ndbt writes the compiled SELECT statement of each model under `target/compiled/<project_name>/`, mirroring the model's folder, with `ref` and `source` resolved to real relation names. This is the file to copy into a warehouse console to troubleshoot.\n\nINCORRECT COMPETING OPTIONS:\n- `logs/dbt.log`: it records execution logs, not a standalone copy of each compiled model.\n- `target/run/`: it holds the SQL that dbt actually runs, including the `create table as` wrapper, so it is not the plain compiled query.\n- `target/catalog.json`: it holds table and column metadata produced by `dbt docs generate`, not SQL.",
@@ -962,7 +951,7 @@ select * from {{ ref('raw_source') }}`,
     id: 53,
     category: "Debug Data Models",
     difficulty: "Intermediate",
-    questionText: "A developer executes `dbt run` on a large analytics sequence, resulting in: 'Compilation Error: Cyclic dependency detected'. Which of the following is the most direct approach to identify and resolve this error compiling the DAG?",
+    questionText: "A developer runs `dbt run` and dbt stops before building any model, reporting `Found a cycle: model.analytics.int_orders --> model.analytics.fct_orders --> model.analytics.int_orders`. Which approach resolves this error?",
     options: [
       "Run `dbt run --full-refresh` to rebuild the models in the cycle from scratch.",
       "Find the models in the cycle in the error output and move shared logic into a separate upstream model.",
@@ -1074,13 +1063,13 @@ select * from {{ ref('raw_source') }}`,
     id: 60,
     category: "Test and Document Models",
     difficulty: "Advanced",
-    questionText: "By default, if a generic test fails with even a single row, the entire `dbt test` execution registers as an error. How can a developer customize a test so it returns a warning instead of halting execution on low failure thresholds?",
-    codeSnippet: `columns:
-  - name: user_id
-    data_tests:
-      - unique:
-          config:
-            # Set severity behavior here`,
+    questionText: "By default, a generic test that returns even one failing row is reported as an error, and `dbt test` exits with a failure. How can a developer configure the test below so that its failures are reported as warnings instead?",
+    codeSnippet: `models:
+  - name: dim_users
+    columns:
+      - name: user_id
+        data_tests:
+          - unique`,
     codeLanguage: "yaml",
     options: [
       "Set `store_failures: true` in the test `config` so failing rows are stored and the run continues.",
@@ -1097,7 +1086,7 @@ select * from {{ ref('raw_source') }}`,
     id: 61,
     category: "Test and Document Models",
     difficulty: "Intermediate",
-    questionText: "An analytics team is running `dbt source freshness` and gets active failures. The team verifies that the data is arriving on time but notices that timezone offsets are causing freshness deviations. How is freshness computed by dbt?",
+    questionText: "An analytics team runs `dbt source freshness` on a source table configured with `loaded_at_field: _loaded_at` and gets failures although the data arrives on time. How does dbt compute freshness for this table?",
     options: [
       "dbt reads the creation timestamps of the source table's files in storage.",
       "dbt compares the maximum `loaded_at_field` value to the current UTC time.",
@@ -1105,7 +1094,7 @@ select * from {{ ref('raw_source') }}`,
       "dbt compares the maximum `loaded_at_field` value to the timestamp in the previous `sources.json`."
     ],
     correctAnswers: [1],
-    explanation: "CORRECT ACTION:\nSource freshness checks whether data is arriving on schedule. dbt queries the maximum value of the `loaded_at_field` column in the source table and compares it with the current time. Timestamps stored in a local timezone instead of UTC therefore produce misleading freshness results.\n\nINCORRECT COMPETING OPTIONS:\n- File creation timestamps in storage: dbt queries the warehouse and never inspects the underlying storage files.\n- Minimum `loaded_at_field` against the last `dbt run`: freshness uses the most recent (maximum) value, and it is measured against the current time, not a previous run.\n- Maximum `loaded_at_field` against the previous `sources.json`: the artifact stores the result of the last check but is not the reference point for the calculation.",
+    explanation: "CORRECT ACTION:\nSource freshness checks whether data is arriving on schedule. dbt queries the maximum value of the `loaded_at_field` column in the source table and compares it with the current time in UTC.\n\nINCORRECT COMPETING OPTIONS:\n- File creation timestamps in storage: dbt queries the warehouse and never inspects the underlying storage files.\n- Minimum `loaded_at_field` against the last `dbt run`: freshness uses the most recent (maximum) value, and it is measured against the current time, not a previous run.\n- Maximum `loaded_at_field` against the previous `sources.json`: the artifact stores the result of the last check but is not the reference point for the calculation.",
     references: "https://docs.getdbt.com/docs/build/sources#source-freshness",
     dbtVersionFocus: "Core Freshness Rules"
   },
@@ -1179,7 +1168,7 @@ select * from {{ ref('raw_source') }}`,
     difficulty: "Advanced",
     questionText: "A snapshot uses the `check` strategy with `check_cols: ['status']`. On the next `dbt snapshot`, the `status` value of a record has changed from `'active'` to `NULL`. What does dbt do?",
     options: [
-      "dbt sets `dbt_valid_to` on the existing row and inserts a new row, because it counts a change to `NULL` as a change.",
+      "dbt closes the existing row and inserts a new row, because a change to `NULL` counts as a change.",
       "dbt keeps the existing row unchanged, because a comparison involving `NULL` never evaluates to true.",
       "dbt fails the snapshot, because a column in `check_cols` cannot contain `NULL`.",
       "dbt updates the existing row in place and adds no new row, because the key is unchanged."
@@ -1193,7 +1182,7 @@ select * from {{ ref('raw_source') }}`,
     id: 67,
     category: "Deploy dbt Projects",
     difficulty: "Advanced",
-    questionText: "An analytics engineer creates a custom `generate_schema_name` macro. Why is it standard practice to retain a check for `target.name` or `target.profile` inside this macro, and what is the potential risk if we simply return `custom_schema_name` directly?",
+    questionText: "An analytics engineer writes a custom `generate_schema_name` macro. Why is it standard practice to keep a check on `target.name` inside this macro, and what is the risk if the macro simply returns `custom_schema_name`?",
     options: [
       "dbt raises a compilation error because the macro never references `target`.",
       "dbt uses the custom schema alone, so development runs write to production.",
@@ -1241,7 +1230,7 @@ select * from {{ ref('raw_source') }}`,
     id: 70,
     category: "Develop Models",
     difficulty: "Intermediate",
-    questionText: "In the dbt Semantic Layer, what is the fundamental structural relationship and difference between a 'Semantic Model' and a 'Metric'?",
+    questionText: "In dbt Core 1.11, what is the structural relationship between a semantic model and a metric in the dbt Semantic Layer?",
     options: [
       "A semantic model defines the calculation over a table; a metric defines the entities and dimensions.",
       "A semantic model defines entities, dimensions and measures; a metric calculates over measures.",
@@ -1257,7 +1246,7 @@ select * from {{ ref('raw_source') }}`,
     id: 71,
     category: "Develop Models",
     difficulty: "Basic",
-    questionText: "When auditing a historical snapshot table, which automatically generated column evaluates to NULL for rows reflecting the current, active state of a record?",
+    questionText: "By default, which column that dbt adds to a snapshot table is NULL for the row holding the current version of a record?",
     options: [
       "`dbt_valid_from`",
       "`dbt_valid_to`",
@@ -1265,7 +1254,7 @@ select * from {{ ref('raw_source') }}`,
       "`dbt_updated_at`"
     ],
     correctAnswers: [1],
-    explanation: "CORRECT ACTION:\nSnapshots keep one row per version of a record. The current version has a `dbt_valid_to` of NULL. When a change is detected, dbt sets `dbt_valid_to` on the old row to the time of the change and inserts a new row with a NULL `dbt_valid_to`.\n\nINCORRECT COMPETING OPTIONS:\n- `dbt_valid_from`: it holds the time a version became valid and is populated on every row.\n- `dbt_scd_id`: it is a generated unique identifier for each row version and is never NULL.\n- `dbt_updated_at`: it holds the source's update timestamp for the row and is populated on every row.",
+    explanation: "CORRECT ACTION:\nSnapshots keep one row per version of a record. By default, the current version has a `dbt_valid_to` of NULL. When a change is detected, dbt sets `dbt_valid_to` on the old row to the time of the change and inserts a new row with a NULL `dbt_valid_to`. The `dbt_valid_to_current` config replaces this NULL with a custom value, such as a far-future date.\n\nINCORRECT COMPETING OPTIONS:\n- `dbt_valid_from`: it holds the time a version became valid and is populated on every row.\n- `dbt_scd_id`: it is a generated unique identifier for each row version and is never NULL.\n- `dbt_updated_at`: it holds the source record's change timestamp, or the snapshot time under the `check` strategy without `updated_at`, and is populated on every row.",
     references: "https://docs.getdbt.com/docs/build/snapshots",
     dbtVersionFocus: "Core Snapshots"
   },
@@ -1431,7 +1420,7 @@ select * from {{ ref('raw_source') }}`,
     options: [
       "dbt builds the model with the returned `FLOAT` type and logs a warning.",
       "dbt casts the column to the `data_type` declared in the YAML and builds the model.",
-      "dbt fails the model because the returned column type does not match the contract.",
+      "dbt fails the model because the returned type differs from the declared `data_type`.",
       "dbt builds the model and then fails the tests that check column types."
     ],
     correctAnswers: [2],
@@ -1465,12 +1454,6 @@ select * from {{ ref('raw_source') }}`,
     category: "Deploy dbt Projects",
     difficulty: "Advanced",
     questionText: "A `profiles.yml` target reads its schema with `env_var`. Which statement about `env_var` is true?",
-    codeSnippet: `prod:
-  outputs:
-    prod_target:
-      type: bigquery
-      schema: "{{ env_var('DBT_SCHEMA', 'analytics') }}"`,
-    codeLanguage: "yaml",
     options: [
       "`env_var` takes a single argument and raises an error if the variable is not set.",
       "`env_var` takes an optional second argument as the default for an unset variable.",
@@ -1486,11 +1469,18 @@ select * from {{ ref('raw_source') }}`,
     id: 84,
     category: "Develop Models",
     difficulty: "Advanced",
-    questionText: "An analytics developer wants to override the behavior of the macro `generate_surrogate_key` from the installed package `dbt_utils` with a version defined in their own project. What is the correct way to configure this lookup override?",
-    codeSnippet: `dispatch:
-  - macro_namespace: dbt_utils
-    search_order: ['my_project', 'dbt_utils']`,
-    codeLanguage: "yaml",
+    questionText: "An analytics developer has written their own version of the `generate_surrogate_key` macro in their project, but models that call `dbt_utils.generate_surrogate_key` still use the version from the installed `dbt_utils` package. What is the correct way to make dbt use the local version?",
+    codeSnippet: `-- macros/generate_surrogate_key.sql
+{% macro default__generate_surrogate_key(field_list) %}
+    md5({{ field_list | join(" || '-' || ") }})
+{% endmacro %}
+
+-- models/dim_orders.sql
+select
+    {{ dbt_utils.generate_surrogate_key(['customer_id', 'order_id']) }} as order_key,
+    *
+from {{ ref('stg_orders') }}`,
+    codeLanguage: "jinja",
     options: [
       "Edit the macro file inside `dbt_packages/dbt_utils/macros/`, which `dbt deps` preserves between installs.",
       "Add a `dispatch` config in `dbt_project.yml` listing the local project first in `search_order`.",
@@ -1498,7 +1488,7 @@ select * from {{ ref('raw_source') }}`,
       "Macros from installed packages cannot be overridden; only their arguments can be changed by the project."
     ],
     correctAnswers: [1],
-    explanation: "CORRECT ACTION:\nThe `dispatch` config in `dbt_project.yml` sets a `search_order` for a macro namespace. Listing the local project before `dbt_utils` makes dbt use the local macro whenever the package calls it through `adapter.dispatch`.\n\nINCORRECT COMPETING OPTIONS:\n- Editing files in `dbt_packages/`: `dbt deps` reinstalls packages and overwrites local edits.\n- Declaring the macro under `macro-paths`: this setting only tells dbt where macro files live and does not change resolution order.\n- Packages cannot be overridden: `dispatch` exists to override package macros.",
+    explanation: "CORRECT ACTION:\n`dbt_utils.generate_surrogate_key` calls its implementation through `adapter.dispatch`, and the `dispatch` config in `dbt_project.yml` sets the `search_order` for the `dbt_utils` macro namespace. Listing the local project before `dbt_utils` makes dbt pick the project's `default__generate_surrogate_key` instead of the package's version.\n\nINCORRECT COMPETING OPTIONS:\n- Editing files in `dbt_packages/`: `dbt deps` reinstalls packages and overwrites local edits.\n- Declaring the macro under `macro-paths`: this setting only tells dbt where macro files live and does not change resolution order.\n- Packages cannot be overridden: `dispatch` exists to override package macros.",
     references: "https://docs.getdbt.com/reference/dbt-jinja-functions/dispatch",
     dbtVersionFocus: "Core (Macro Dispatch Architecture)"
   },
@@ -1533,10 +1523,7 @@ select * from {{ ref('raw_source') }}`,
     database=target.database,
     schema=target.schema,
     identifier='my_table'
-) %}
-{% if existing_relation is not none %}
-    -- SQL code here
-{% endif %}`,
+) %}`,
     codeLanguage: "jinja",
     options: [
       "It raises a compilation error and stops the `dbt build`.",
@@ -1553,7 +1540,7 @@ select * from {{ ref('raw_source') }}`,
     id: 87,
     category: "Develop Models",
     difficulty: "Advanced",
-    questionText: "A data team has been maintaining a `dbt snapshot` table tracking customer memberships for months. During an upstream system migration, a new column called `loyalty_tier` is added to the source. How does dbt handle the existing snapshot database table on the next execution run?",
+    questionText: "A data team has run a snapshot of customer memberships for months. The snapshot's query is `select * from {{ source('crm', 'memberships') }}`. During an upstream system migration, a new column called `loyalty_tier` is added to the source table. What happens to the existing snapshot table on the next `dbt snapshot` run?",
     options: [
       "dbt rebuilds the snapshot table from scratch and discards the history.",
       "dbt adds the column to the snapshot and leaves it null in old rows.",
@@ -1561,7 +1548,7 @@ select * from {{ ref('raw_source') }}`,
       "dbt skips the new column and keeps the snapshot table unchanged."
     ],
     correctAnswers: [1],
-    explanation: "CORRECT ACTION:\nOn the next run, dbt detects the new source column and adds it to the existing snapshot table. Rows that were already stored have a null value in the new column, and dbt does not backfill them.\n\nINCORRECT COMPETING OPTIONS:\n- Rebuilding from scratch: dbt alters the existing table and keeps the stored history.\n- Failing until a manual change: dbt adds the column itself without a manual migration.\n- Skipping the new column: the column is added to the snapshot table.",
+    explanation: "CORRECT ACTION:\nWhen the columns of the snapshot query change, dbt creates the new columns in the existing snapshot table. Because the query selects `*`, `loyalty_tier` is now part of the query, so dbt adds it. Rows that were already stored have a null value in the new column, and dbt does not backfill them. If the query listed its columns explicitly, the new source column would not reach the snapshot until someone added it to the query. Snapshots have no `on_schema_change` config: that setting belongs to incremental models, whose default (`ignore`) does not add new columns.\n\nINCORRECT COMPETING OPTIONS:\n- Rebuilding from scratch: dbt alters the existing table and keeps the stored history.\n- Failing until a manual change: dbt adds the column itself without a manual migration.\n- Skipping the new column: that happens only when the snapshot query does not select the column; `select *` does.",
     references: "https://docs.getdbt.com/docs/build/snapshots#schema-evolution-for-snapshots",
     dbtVersionFocus: "Core Snapshot Behaviours"
   },
@@ -1588,16 +1575,16 @@ dbt run --select "tag:hourly path:models/staging"`,
     id: 89,
     category: "Deploy dbt Projects",
     difficulty: "Intermediate",
-    questionText: "When executing `dbt deps`, a development environment fails with a version conflict error because two different imported packages (e.g., `fivetran_log` and `dbt_utils`) are requesting mutually incompatible versions of a shared transitive helper package. How must this conflict be resolved?",
+    questionText: "`dbt deps` fails with a version conflict: two packages installed from dbt Hub, `fivetran_log` and `dbt_utils`, each require a range of the same shared helper package, and the two ranges do not overlap. How must this conflict be resolved?",
     options: [
       "Set `require-dbt-version` in `dbt_project.yml` so dbt ignores package version constraints.",
       "Change the version constraint in the `packages.yml` inside the installed package in `dbt_packages/`.",
-      "Add the shared package to the root `packages.yml` with a version that both packages accept.",
+      "Change the version of one of the two packages in the root `packages.yml` so their ranges overlap.",
       "Run `dbt clean` and then `dbt deps` again, so dbt resolves the conflict on a fresh install."
     ],
     correctAnswers: [2],
-    explanation: "CORRECT ACTION:\nThe root project's `packages.yml` can list the shared package directly. Pinning a version that satisfies the constraints of both packages gives dbt a version it can install.\n\nINCORRECT COMPETING OPTIONS:\n- Setting `require-dbt-version`: this setting checks the dbt version and has no effect on package version constraints.\n- Editing the installed package's `packages.yml`: `dbt deps` reinstalls packages and overwrites changes in `dbt_packages/`.\n- Running `dbt clean` and `dbt deps` again: the constraints are unchanged, so the same conflict appears.",
-    references: "https://docs.getdbt.com/docs/build/packages#package-version-conflicts",
+    explanation: "CORRECT ACTION:\nFor packages installed from dbt Hub, dbt handles a shared dependency by installing one version that satisfies every package that requires it. When the required ranges do not overlap, no such version exists. Moving one of the importing packages to a release whose requirement overlaps with the other gives dbt a version it can install. Listing the shared package in the root `packages.yml` does not help: a root entry adds one more constraint and cannot satisfy two ranges that do not overlap.\n\nINCORRECT COMPETING OPTIONS:\n- Setting `require-dbt-version`: this setting checks the dbt version and has no effect on package version constraints.\n- Editing the installed package's `packages.yml`: `dbt deps` reinstalls packages and overwrites changes in `dbt_packages/`.\n- Running `dbt clean` and `dbt deps` again: the constraints are unchanged, so the same conflict appears.",
+    references: "https://docs.getdbt.com/docs/build/packages",
     dbtVersionFocus: "Dependency Management"
   },
   {
@@ -1605,15 +1592,13 @@ dbt run --select "tag:hourly path:models/staging"`,
     category: "Test and Document Models",
     difficulty: "Intermediate",
     questionText: "In dbt Core v1.8+, how does an analytics engineer provide static mock data inputs to execute a component level unit test on a transformation model, and where in the filesystem is this declared?",
-    codeSnippet: `unit_tests:
-  - name: test_order_totals
-    model: dim_orders
-    given:
-      - input: ref('stg_orders')
-        rows:
-          - {order_id: 1, amount: 100}
-          - {order_id: 2, amount: 200}`,
-    codeLanguage: "yaml",
+    codeSnippet: `-- models/marts/dim_orders.sql
+select
+    order_id,
+    sum(amount) as order_total
+from {{ ref('stg_orders') }}
+group by order_id`,
+    codeLanguage: "sql",
     options: [
       "In CSV files in the `seeds/` directory, which all unit tests require.",
       "As `rows` under `given` in a `unit_tests` entry of a `.yml` file.",
@@ -1634,10 +1619,10 @@ dbt run --select "tag:hourly path:models/staging"`,
   - name: heavy_clicks
     tables:
       - name: raw_events
-        loaded_at_field: loaded_at
-        freshness:
-          warn_after: {count: 6, period: hour}
-          filter: "loaded_at >= timestamp_sub(current_timestamp(), interval 1 day)"`,
+        config:
+          loaded_at_field: loaded_at
+          freshness:
+            warn_after: {count: 6, period: hour}`,
     codeLanguage: "yaml",
     options: [
       "Set `warn_after` to a longer period so the freshness query scans fewer rows.",
@@ -1654,9 +1639,10 @@ dbt run --select "tag:hourly path:models/staging"`,
     id: 92,
     category: "Develop Models",
     difficulty: "Advanced",
-    questionText: "You are deploying a dbt model materialized as an incremental table targeting BigQuery. The table is partitioned by date, and configured with BigQuery's strict `require_partition_filter: true`. During subsequent incremental builds, why might dbt fail, and how do you protect against this?",
+    questionText: "A BigQuery incremental model uses the default incremental strategy and the config below. Why can the incremental runs after the first build fail, and how do you prevent it?",
     codeSnippet: `{{ config(
     materialized='incremental',
+    unique_key='event_id',
     partition_by={
       "field": "event_date",
       "data_type": "date",
@@ -1667,12 +1653,12 @@ dbt run --select "tag:hourly path:models/staging"`,
     codeLanguage: "jinja",
     options: [
       "`require_partition_filter` is not supported on `date` partitions; remove it from the config.",
-      "The incremental `MERGE` has no filter on the destination partition column; add one on `event_date` with `incremental_predicates`.",
+      "The `MERGE` does not filter the destination's partition column; add `incremental_predicates`.",
       "dbt adds a partition filter only on a full refresh; run `dbt run --full-refresh` on every build.",
-      "The model has no `unique_key`; add one so BigQuery accepts the incremental `MERGE`."
+      "The `MERGE` needs `cluster_by` on `event_date`; add it so BigQuery can prune partitions."
     ],
     correctAnswers: [1],
-    explanation: "CORRECT ACTION:\nWith `require_partition_filter` enabled, BigQuery rejects any query that does not filter on the partition column. The incremental `MERGE` reads the destination table, so it needs a predicate on `event_date` for that table, which `incremental_predicates` adds. A filter inside `is_incremental()` only restricts the rows selected from the source.\n\nINCORRECT COMPETING OPTIONS:\n- Removing the config because dates are unsupported: BigQuery supports it on date-partitioned tables.\n- Full refresh on every build: a full refresh rebuilds the table and removes the benefit of incremental runs.\n- Adding a `unique_key`: this setting identifies rows to update and does not supply a partition filter.",
+    explanation: "CORRECT ACTION:\nThe default incremental strategy on BigQuery is `merge`. With `require_partition_filter` enabled, BigQuery rejects any query that does not filter on the partition column. The incremental `MERGE` reads the destination table, so it needs a predicate on `event_date` for that table, which `incremental_predicates` adds through the `DBT_INTERNAL_DEST` alias. A filter inside `is_incremental()` only restricts the rows selected from the source.\n\nINCORRECT COMPETING OPTIONS:\n- Removing the config because dates are unsupported: BigQuery supports it on date-partitioned tables.\n- Full refresh on every build: a full refresh rebuilds the table and removes the benefit of incremental runs.\n- Adding `cluster_by`: clustering orders data inside partitions and does not add the partition filter that BigQuery requires.",
     references: "https://docs.getdbt.com/reference/resource-configs/bigquery-configs#require_partition_filter",
     dbtVersionFocus: "BigQuery Adaption Specs"
   },
@@ -1699,7 +1685,7 @@ dbt run --select "tag:hourly path:models/staging"`,
     questionText: "How does the `delete+insert` incremental strategy differ from the `merge` strategy?",
     options: [
       "`delete+insert` runs only on Postgres, and other adapters reject it.",
-      "`delete+insert` deletes rows matching `unique_key` and then inserts, where `merge` issues one `MERGE` statement.",
+      "`delete+insert` runs a `delete` and then an `insert`; `merge` runs one `MERGE` statement.",
       "`delete+insert` is required on Snowflake and BigQuery, because they do not support `merge`.",
       "`delete+insert` replaces `merge` whenever `--full-refresh` is passed, on any adapter."
     ],
@@ -1713,10 +1699,7 @@ dbt run --select "tag:hourly path:models/staging"`,
     category: "Debug Data Models",
     difficulty: "Intermediate",
     questionText: "Inside an advanced dbt Jinja macro, you execute a database call using the `run_query` function. What data type is returned by `run_query`, and how should a developer extract a specific cell value?",
-    codeSnippet: `{% set results = run_query('select count(*) as count from ' ~ this) %}
-{% if execute %}
-    {% set total_records = results.rows[0][0] %}
-{% endif %}`,
+    codeSnippet: `{% set results = run_query('select count(*) as count from ' ~ this) %}`,
     codeLanguage: "jinja",
     options: [
       "A Python dictionary; a cell is read with a key, as in `results['count']`.",
@@ -1725,7 +1708,7 @@ dbt run --select "tag:hourly path:models/staging"`,
       "A Pandas DataFrame; a cell is read by position, as in `results.iloc[0, 0]`."
     ],
     correctAnswers: [1],
-    explanation: "CORRECT ACTION:\n`run_query` returns an `agate` table. A cell is read by position through its rows and columns, such as `results.rows[0][0]` for the first value in the first row. Reading the result is wrapped in `execute` because queries run only at execution time, not during parsing.\n\nINCORRECT COMPETING OPTIONS:\n- Python dictionary: the result is a table object, not a dictionary keyed by column name.\n- Database cursor: dbt returns a fully loaded table, so no cursor methods are available.\n- Pandas DataFrame: dbt uses `agate`, not Pandas, so `iloc` does not exist.",
+    explanation: "CORRECT ACTION:\n`run_query` returns an `agate` table. A cell is read by position through its rows and columns, such as `results.rows[0][0]` for the first value in the first row. Reading the result should be wrapped in `{% if execute %}` because queries run only at execution time, not during parsing.\n\nINCORRECT COMPETING OPTIONS:\n- Python dictionary: the result is a table object, not a dictionary keyed by column name.\n- Database cursor: dbt returns a fully loaded table, so no cursor methods are available.\n- Pandas DataFrame: dbt uses `agate`, not Pandas, so `iloc` does not exist.",
     references: "https://docs.getdbt.com/reference/dbt-jinja-functions/run_query",
     dbtVersionFocus: "Advanced Macro Jinja API"
   },
@@ -1827,15 +1810,6 @@ models:
     category: "Test and Document Models",
     difficulty: "Intermediate",
     questionText: "An analytics engineering manager configures source `freshness` checks on a high-velocity webhook interface dataset. What is the correct syntax for declaring freshness parameters inside source schemas, and does it support string plurals?",
-    codeSnippet: `sources:
-  - name: marketing_feeds
-    tables:
-      - name: leads
-        freshness:
-          warn_after:
-            count: 24
-            period: hour`,
-    codeLanguage: "yaml",
     options: [
       "`warn_after` takes `count` and `period`, and `period` also accepts plural values such as `hours`.",
       "`warn_after` takes `count` and `period`, and `period` accepts only singular values such as `hour`.",
@@ -1851,8 +1825,8 @@ models:
     id: 102,
     category: "Debug Data Models",
     difficulty: "Advanced",
-    questionText: "A developer filters a metadata table by the current model's name, using `{{ this.identifier }}` in a comparison. What do `{{ this }}` and `this.identifier` render as?",
-    codeSnippet: `where table_name = '{{ this.identifier }}'`,
+    questionText: "A developer filters a metadata table with `{{ this.identifier }}` in a comparison. What do `{{ this }}` and `this.identifier` render as?",
+    codeSnippet: `where object_name = '{{ this.identifier }}'`,
     codeLanguage: "jinja",
     options: [
       "`this` renders as the table name only, and `this.schema` gives the fully qualified relation name.",
@@ -1870,15 +1844,6 @@ models:
     category: "Deploy dbt Projects",
     difficulty: "Basic",
     questionText: "A developer checks in multiple profile target connections inside their local `profiles.yml` configuration file under an active project named `ecommerce`. If they execute `dbt run` from their local terminal, how does dbt know which target connection (e.g., `dev` vs `prod`) to connect with?",
-    codeSnippet: `ecommerce:
-  target: dev_john
-  outputs:
-    dev_john:
-      type: postgres
-      ...
-    prod:
-      type: postgres`,
-    codeLanguage: "yaml",
     options: [
       "dbt uses the first output listed in `outputs`, and `--target` is ignored.",
       "dbt uses the profile's `target` value, unless `--target` overrides it.",
@@ -1886,7 +1851,7 @@ models:
       "dbt prompts for a target in the terminal when `--target` is not passed."
     ],
     correctAnswers: [1],
-    explanation: "CORRECT ACTION:\nThe `target` key in the profile names the default output, here `dev_john`. Passing `--target` (or `-t`) on the command line overrides that default for a single invocation.\n\nINCORRECT COMPETING OPTIONS:\n- First output in `outputs`: order does not matter, and `--target` is honoured.\n- Output named `dev`: `dev` is only a naming convention, and the default comes from the `target` key in `profiles.yml`.\n- Terminal prompt for a target: dbt never prompts, it falls back to the `target` key.",
+    explanation: "CORRECT ACTION:\nThe `target` key in the profile names the default output. Passing `--target` (or `-t`) on the command line overrides that default for a single invocation.\n\nINCORRECT COMPETING OPTIONS:\n- First output in `outputs`: order does not matter, and `--target` is honoured.\n- Output named `dev`: `dev` is only a naming convention, and the default comes from the `target` key in `profiles.yml`.\n- Terminal prompt for a target: dbt never prompts, it falls back to the `target` key.",
     references: "https://docs.getdbt.com/docs/core/connect-data-platform/profiles.yml#understanding-profilesyml",
     dbtVersionFocus: "Core Connection Profiles"
   },
@@ -1955,17 +1920,17 @@ models:
     id: 107,
     category: "Deploy dbt Projects",
     difficulty: "Advanced",
-    questionText: "An engineering team is running a production deploy script in their Snowflake environment. To optimize rebuild durations and storage fees under Slim CI, they execute `dbt clone --state prod_artifacts`. What is the functional mechanism of the `dbt clone` command?",
+    questionText: "A CI job on Snowflake runs the command below. The `prod_artifacts` directory holds the manifest from the latest production run, and none of the selected nodes exist yet in the CI target schema. What does `dbt clone` do?",
     codeSnippet: `dbt clone --state prod_artifacts --select tag:daily`,
     codeLanguage: "bash",
     options: [
       "It copies the compiled SQL from the state artifacts into the `target` folder instead of compiling.",
-      "It clones the relations recorded in the state artifacts into the target schema without rebuilding them.",
+      "It creates the selected nodes in the target schema from the production relations, without rebuilding them.",
       "It rebuilds the selected models and stores the results in the `prod_artifacts` folder.",
       "It runs the selected models with `--full-refresh` against the production schema."
     ],
     correctAnswers: [1],
-    explanation: "CORRECT ACTION:\n`dbt clone` reads the manifest in the state directory and creates the selected nodes in the target schema as clones of the production relations. On Snowflake this is a zero-copy clone, so no model SQL is run and no data is duplicated.\n\nINCORRECT COMPETING OPTIONS:\n- Copying compiled SQL into `target`: the command creates warehouse objects, it does not copy compiled files.\n- Rebuilding and storing results in `prod_artifacts`: that folder holds artifacts such as `manifest.json` and receives no model results.\n- Running with `--full-refresh` against production: `dbt clone` writes to the target schema and does not execute model SQL.",
+    explanation: "CORRECT ACTION:\n`dbt clone` reads the manifest in the state directory and creates the selected nodes in the target schema from the relations recorded there. On Snowflake, a node that exists as a table in production is created as a zero-copy clone, and other nodes are created as `select * from` pointer views, so no model SQL is run and no data is duplicated.\n\nINCORRECT COMPETING OPTIONS:\n- Copying compiled SQL into `target`: the command creates warehouse objects, it does not copy compiled files.\n- Rebuilding and storing results in `prod_artifacts`: that folder holds artifacts such as `manifest.json` and receives no model results.\n- Running with `--full-refresh` against production: `dbt clone` writes to the target schema and does not execute model SQL.",
     references: "https://docs.getdbt.com/reference/commands/clone",
     dbtVersionFocus: "v1.6+ (dbt clone)"
   },
@@ -1973,7 +1938,7 @@ models:
     id: 108,
     category: "Develop Models",
     difficulty: "Advanced",
-    questionText: "You are implementing the `microbatch` incremental strategy in dbt Core v1.11 to process clickstream event volumes in batches. Which configuration parameters are legally mandatory for a model utilizing this strategy?",
+    questionText: "You are implementing the `microbatch` incremental strategy on Snowflake in dbt Core v1.11 to process clickstream events in batches. Which configs must the model declare?",
     codeSnippet: `models:
   - name: fct_web_logs
     config:
@@ -1988,7 +1953,7 @@ models:
       "`unique_key`, `begin` and `lookback`"
     ],
     correctAnswers: [1],
-    explanation: "CORRECT ACTION:\nA `microbatch` model requires `event_time`, the timestamp column used to slice the data, `begin`, the start of the first batch, and `batch_size`, the granularity of each batch such as `day`. `unique_key` and `lookback` are not required.\n\nINCORRECT COMPETING OPTIONS:\n- `unique_key`, `event_time` and `batch_size`: `begin` is missing, and `unique_key` is not used by this strategy.\n- `event_time`, `lookback` and `batch_size`: `begin` is missing, and `lookback` is optional with a default value.\n- `unique_key`, `begin` and `lookback`: `event_time` and `batch_size` are missing, and neither `unique_key` nor `lookback` is required.",
+    explanation: "CORRECT ACTION:\nA `microbatch` model requires `event_time`, the timestamp column used to slice the data, `begin`, the start of the first batch, and `batch_size`, the granularity of each batch such as `day`. On Snowflake, `unique_key` and `lookback` are not required. Some adapters add requirements, such as `unique_key` on Postgres.\n\nINCORRECT COMPETING OPTIONS:\n- `unique_key`, `event_time` and `batch_size`: `begin` is missing, and `unique_key` is not required on Snowflake.\n- `event_time`, `lookback` and `batch_size`: `begin` is missing, and `lookback` is optional with a default value.\n- `unique_key`, `begin` and `lookback`: `event_time` and `batch_size` are missing, and neither `unique_key` nor `lookback` is required on Snowflake.",
     references: "https://docs.getdbt.com/docs/build/incremental-microbatch",
     dbtVersionFocus: "v1.9+ (Microbatch Incremental)"
   },
@@ -1996,19 +1961,19 @@ models:
     id: 109,
     category: "Develop Models",
     difficulty: "Advanced",
-    questionText: "An analytics team installs an external utility package, but they want to override the behavior of a specific default macro from that package. How can they configure macro resolution order using the `dispatch` config block inside `dbt_project.yml`?",
+    questionText: "An analytics team that uses the `dbt_utils` package adds the `dispatch` config below to `dbt_project.yml`. What does `search_order` control?",
     codeSnippet: `dispatch:
   - macro_namespace: dbt_utils
     search_order: ['my_project', 'dbt_utils']`,
     codeLanguage: "yaml",
     options: [
       "`search_order` sets the order in which `dbt deps` installs packages into the project.",
-      "`search_order` sets the order of projects that dbt searches for macros in the `dbt_utils` namespace.",
+      "`search_order` sets the order of projects dbt checks when it resolves a package's macro.",
       "`search_order` sets the order in which macros run in `on-run-start` hooks.",
       "`search_order` sets the order in which packages are loaded into `manifest.json`."
     ],
     correctAnswers: [1],
-    explanation: "CORRECT ACTION:\n`dispatch` lets a project change where dbt looks for macros called through a namespace such as `dbt_utils`. With `my_project` listed first, dbt uses a same-named macro defined in the project before the one in the package, so the package code stays unchanged.\n\nINCORRECT COMPETING OPTIONS:\n- Package installation order: `dbt deps` installs what `packages.yml` lists and ignores `dispatch`.\n- Hook execution order: hooks run in the order they are defined, and `dispatch` does not change it.\n- Loading order into `manifest.json`: `dispatch` affects macro lookup only, not how the manifest is built.",
+    explanation: "CORRECT ACTION:\n`search_order` lists the projects dbt checks, in order, when it resolves a macro that a package dispatches through its namespace, here `dbt_utils`. With `my_project` listed first, dbt uses a matching implementation defined in the project, such as `default__generate_surrogate_key`, before the package's own, so the package code stays unchanged.\n\nINCORRECT COMPETING OPTIONS:\n- Package installation order: `dbt deps` installs what `packages.yml` lists and ignores `dispatch`.\n- Hook execution order: hooks run in the order they are defined, and `dispatch` does not change it.\n- Loading order into `manifest.json`: `dispatch` affects macro lookup only, not how the manifest is built.",
     references: "https://docs.getdbt.com/reference/dbt-jinja-functions/dispatch",
     dbtVersionFocus: "Core Macro Resolution & Governance"
   },
@@ -2019,7 +1984,7 @@ models:
     questionText: "A CI job runs `dbt run --select state:modified --defer --state prod_state`. Only `fct_revenue` is modified. It selects from `ref('stg_orders')`, which is unmodified and does not exist in the CI schema. How does dbt resolve `ref('stg_orders')`?",
     options: [
       "The run fails because `stg_orders` does not exist in the CI schema.",
-      "It resolves to the production relation recorded in the `prod_state` manifest.",
+      "It resolves to the production relation in the `prod_state` manifest.",
       "It resolves to an empty relation created in the CI schema.",
       "It resolves to a clone of `stg_orders` created in the CI schema."
     ],
@@ -2041,11 +2006,11 @@ models:
     options: [
       "`analytics_dev_mart` in development and `mart` in production",
       "`analytics_dev_mart` in development and `analytics_mart` in production",
-      "`mart` in both development and production",
+      "`mart_analytics_dev` in development and `mart_analytics` in production",
       "`analytics_dev` in development and `mart` in production"
     ],
     correctAnswers: [1],
-    explanation: "CORRECT ACTION:\nThe default `generate_schema_name` macro appends the custom schema to the target schema in every environment, so the model builds in `analytics_dev_mart` in development and `analytics_mart` in production. Using the custom schema alone in production requires overriding the macro.\n\nINCORRECT COMPETING OPTIONS:\n- Appending in development and using `mart` alone in production: that behavior needs a custom `generate_schema_name` override; the default does not check the environment.\n- Using `mart` alone in both environments: the default macro never drops the target schema prefix.\n- Ignoring the custom schema in development and using it alone in production: the default macro applies the custom schema in both environments.",
+    explanation: "CORRECT ACTION:\nThe default `generate_schema_name` macro appends the custom schema to the target schema in every environment, so the model builds in `analytics_dev_mart` in development and `analytics_mart` in production. Using the custom schema alone in production requires overriding the macro.\n\nINCORRECT COMPETING OPTIONS:\n- Appending in development and using `mart` alone in production: that behavior needs a custom `generate_schema_name` override; the default does not check the environment.\n- `mart_analytics_dev` and `mart_analytics`: the default macro puts the target schema first and appends the custom schema after an underscore.\n- Ignoring the custom schema in development and using it alone in production: the default macro applies the custom schema in both environments.",
     references: "https://docs.getdbt.com/docs/build/custom-schemas",
     dbtVersionFocus: "Core Schema Macro Customization"
   },
@@ -2054,14 +2019,6 @@ models:
     category: "Test and Document Models",
     difficulty: "Advanced",
     questionText: "When planning snapshot rules for historical capture, what is a crucial performance and cost trade-off between the `check` strategy and the `timestamp` strategy?",
-    codeSnippet: `snapshots:
-  - name: orders_snapshot
-    relation: source('shop', 'orders')
-    config:
-      unique_key: order_id
-      strategy: check
-      check_cols: all`,
-    codeLanguage: "yaml",
     options: [
       "`timestamp` compares every column in the source row, while `check` compares a single `updated_at` column.",
       "`timestamp` compares a single `updated_at` column, while `check` compares every column in `check_cols`.",
@@ -2069,7 +2026,7 @@ models:
       "`timestamp` rebuilds the snapshot table on each run, while `check` only inserts new rows."
     ],
     correctAnswers: [1],
-    explanation: "CORRECT ACTION:\nThe `timestamp` strategy detects changes by comparing one column, `updated_at`, so it is the cheaper option. The `check` strategy compares each column listed in `check_cols`, and with `all` that means every column, which costs more on wide or large tables.\n\nINCORRECT COMPETING OPTIONS:\n- `timestamp` compares every column and `check` compares one: this reverses the two strategies.\n- `check` needs `updated_at` and `timestamp` needs `check_cols`: each strategy requires its own config, `updated_at` for `timestamp` and `check_cols` for `check`.\n- `timestamp` rebuilds the table and `check` only inserts: both strategies keep history and update changed records without rebuilding the table.",
+    explanation: "CORRECT ACTION:\nThe `timestamp` strategy detects changes by comparing one column, `updated_at`, so it is the cheaper option. The `check` strategy compares each column listed in `check_cols`, and `check_cols: all` means every column, which costs more on wide or large tables.\n\nINCORRECT COMPETING OPTIONS:\n- `timestamp` compares every column and `check` compares one: this reverses the two strategies.\n- `check` needs `updated_at` and `timestamp` needs `check_cols`: each strategy requires its own config, `updated_at` for `timestamp` and `check_cols` for `check`.\n- `timestamp` rebuilds the table and `check` only inserts: both strategies keep history and update changed records without rebuilding the table.",
     references: "https://docs.getdbt.com/docs/build/snapshots",
     dbtVersionFocus: "Core Snapshot Strategies"
   },
@@ -2077,17 +2034,7 @@ models:
     id: 113,
     category: "Develop Models",
     difficulty: "Advanced",
-    questionText: "Under the dbt Semantic Layer (MetricFlow standards), you have two pre-existing simple metrics declared below. You want to define a new derived metric `average_revenue_per_user` that divides `revenue` by `active_users`. Which configuration structure inside your schema YAML correctly defines this derived metric?",
-    codeSnippet: `metrics:
-  - name: revenue
-    type: simple
-    type_params:
-      measure: total_revenue
-  - name: active_users
-    type: simple
-    type_params:
-      measure: user_count`,
-    codeLanguage: "yaml",
+    questionText: "In the dbt Semantic Layer, the simple metrics `revenue` and `active_users` already exist. You want to add a metric `average_revenue_per_user` that divides `revenue` by `active_users`. Which definition is correct?",
     options: [
       "A `simple` metric with `measure: revenue / active_users` and no other parameters.",
       "A `derived` metric with `expr: revenue / active_users` and both metrics under `metrics`.",
@@ -2103,15 +2050,7 @@ models:
     id: 114,
     category: "Test and Document Models",
     difficulty: "Advanced",
-    questionText: "An analytics engineer is writing a unit test under dbt Core v1.8+ for a model that parses a JSON string column. How do they mock the value of that column in the input `rows` block of the properties file?",
-    codeSnippet: `unit_tests:
-  - name: test_nested_format
-    model: my_nested_parser
-    given:
-      - input: ref('stg_json_source')
-        rows:
-          # mock the \`properties\` JSON column here`,
-    codeLanguage: "yaml",
+    questionText: "An analytics engineer on Postgres is writing a unit test under dbt Core v1.8+ for a model that parses a `json` column from its input `stg_json_source`. How do they mock the value of that column for the input?",
     options: [
       "Return the nested value from a macro listed under `overrides.macros`.",
       "Write the nested value as a JSON string in the `rows` entry.",
@@ -2119,7 +2058,7 @@ models:
       "Mock only the top-level columns, since unit tests cannot set nested values."
     ],
     correctAnswers: [1],
-    explanation: "CORRECT ACTION:\nIn a unit test, a JSON column is mocked by writing its value as a string in the `rows` entry. Arrays are written as YAML lists and structs as YAML mappings, so nested values do not need a separate mechanism.\n\nINCORRECT COMPETING OPTIONS:\n- Macro under `overrides.macros`: `overrides.macros` replaces the output of dbt macros such as `is_incremental`, and does not supply row values.\n- `expect.fixture` for the input: `expect` describes the expected output of the model, not its inputs.\n- Top-level columns only: unit tests can mock any column type the warehouse supports, nested types included.",
+    explanation: "CORRECT ACTION:\nOn Postgres, a `json` column is mocked by writing its whole value as a quoted JSON string in the `rows` entry, such as `'{\"bar\": \"baz\", \"active\": false}'`. Nested keys are part of that string, so no separate mechanism is needed. The format for other complex types, such as arrays and structs, depends on the adapter.\n\nINCORRECT COMPETING OPTIONS:\n- Macro under `overrides.macros`: `overrides.macros` replaces the output of dbt macros such as `is_incremental`, and does not supply row values.\n- `expect.fixture` for the input: `expect` describes the expected output of the model, not its inputs.\n- Top-level columns only: the JSON string in `rows` carries the nested keys with the rest of the value.",
     references: "https://docs.getdbt.com/docs/build/unit-tests",
     dbtVersionFocus: "v1.8+ (Model Unit Testing)"
   },
@@ -2185,7 +2124,7 @@ models:
     id: 118,
     category: "Develop Models",
     difficulty: "Advanced",
-    questionText: "An analytics engineering manager sets the incremental strategy `on_schema_change: sync_all_columns` on a transactional database model. What is the explicit operational behavior when a column is deleted from the source query?",
+    questionText: "An analytics engineer sets `on_schema_change: sync_all_columns` on an incremental model. What does dbt do on the next incremental run when a column is removed from the model's query?",
     options: [
       "dbt stops with an error and requests a `--full-refresh` run.",
       "dbt drops the column from the target table to match the query.",

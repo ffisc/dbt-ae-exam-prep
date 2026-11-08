@@ -50,7 +50,7 @@ export const formatQuestions: Question[] = [
     "format": "fill_blank",
     "category": "Develop Models",
     "difficulty": "Advanced",
-    "questionText": "The `dim_customers` model has versions 1 and 2, and version 2 is the latest. A downstream model must keep reading version 1 until its owners migrate. Which keyword argument completes the `ref` call?",
+    "questionText": "The `dim_customers` model is published in two numbered releases, 1 and 2, and an unpinned `ref('dim_customers')` resolves to 2. A downstream model must keep reading 1 until its owners migrate. Which keyword argument completes the `ref` call?",
     "codeSnippet": "select * from {{ ref('dim_customers', [[1]]=1) }}",
     "codeLanguage": "jinja",
     "blanks": [
@@ -214,8 +214,8 @@ export const formatQuestions: Question[] = [
     "format": "fill_blank",
     "category": "Deploy dbt Projects",
     "difficulty": "Advanced",
-    "questionText": "A CI job must build only the models that differ from the production manifest, plus their downstream models. Unselected upstream models are not built in the CI schema, so their refs must resolve to the production relations. The production manifest is stored in `prod-run-artifacts`. Complete the command.",
-    "codeSnippet": "dbt build --select [[1]]:modified+ [[2]] --state prod-run-artifacts",
+    "questionText": "A CI job must build only the models that differ from the production manifest, plus their downstream models. Unselected upstream models are not built in the CI schema, so their refs must resolve to the production relations. The job sets an environment variable that points dbt at the production manifest in `prod-run-artifacts`. Complete the command.",
+    "codeSnippet": "dbt build --select [[1]]:modified+ [[2]]",
     "codeLanguage": "bash",
     "blanks": [
       {
@@ -229,7 +229,7 @@ export const formatQuestions: Question[] = [
         ]
       }
     ],
-    "explanation": "CORRECT ACTION:\nThe `state:modified+` selector compares the project with the manifest given by `--state` and selects changed nodes and their descendants. `--defer` resolves refs to unselected nodes using that manifest, but only when the node does not exist in the target database.\n\nCOMMON MISTAKES:\n- `result`: it selects nodes by their status in the previous `run_results.json` and does not detect code changes.\n- `--favor-state`: it makes deferral prefer the state manifest even when the node exists in the database, and it only works together with `--defer`.\n- `--full-refresh`: it rebuilds incremental models from scratch and does not resolve refs to another environment.",
+    "explanation": "CORRECT ACTION:\nThe `state:modified+` selector compares the project with the manifest from a previous run and selects changed nodes and their descendants. Here the job supplies that manifest path through the `DBT_ENGINE_STATE` environment variable, which sets the same value as the `--state` flag. `--defer` resolves refs to unselected nodes using that manifest, but only when the node does not exist in the target database.\n\nCOMMON MISTAKES:\n- `result`: it selects nodes by their status in the previous `run_results.json` and does not detect code changes.\n- `--favor-state`: it makes deferral prefer the state manifest even when the node exists in the database, and it only works together with `--defer`.\n- `--full-refresh`: it rebuilds incremental models from scratch and does not resolve refs to another environment.",
     "references": "https://docs.getdbt.com/reference/node-selection/defer",
     "dbtVersionFocus": "Slim CI (state and defer)"
   },
@@ -238,23 +238,22 @@ export const formatQuestions: Question[] = [
     "format": "fill_blank",
     "category": "Deploy dbt Projects",
     "difficulty": "Basic",
-    "questionText": "A project's `profiles.yml` defines the targets `dev` and `prod`, and the default is `dev`. The production job must run `dbt build [[1]] prod` to use the `prod` target. The profile sets its default target with the top-level key in the snippet below. Complete both.",
-    "codeSnippet": "my_project:\n  [[2]]: dev\n  outputs:\n    dev:\n      type: snowflake\n    prod:\n      type: snowflake",
+    "questionText": "A project's `profiles.yml` defines two connections, `dev` and `prod`. dbt must use `dev` when a command does not choose a connection, and the production job chooses `prod` with a command-line flag. Complete the two keys in the profile below.",
+    "codeSnippet": "my_project:\n  [[1]]: dev\n  [[2]]:\n    dev:\n      type: snowflake\n    prod:\n      type: snowflake",
     "codeLanguage": "yaml",
     "blanks": [
       {
         "accepted": [
-          "--target",
-          "-t"
+          "target"
         ]
       },
       {
         "accepted": [
-          "target"
+          "outputs"
         ]
       }
     ],
-    "explanation": "CORRECT ACTION:\nThe `target` key in a profile sets the default target, and the `--target` flag (short form `-t`) selects another target defined under `outputs` for one command. The name passed to the flag must exist in the profile.\n\nCOMMON MISTAKES:\n- `--profile`: it selects which profile to use, not which target within the profile.\n- `outputs`: it is the key that holds the target definitions, and it does not name the default target.",
+    "explanation": "CORRECT ACTION:\nThe `target` key in a profile names the default target, and the `outputs` key holds the target definitions. The production job selects another target for one command with `--target prod` (short form `-t prod`); the name must exist under `outputs`.\n\nCOMMON MISTAKES:\n- `default` or `profile` for the first key: the key that names the default target is `target`.\n- `targets` or `connections` for the second key: the target definitions sit under `outputs`.",
     "references": "https://docs.getdbt.com/docs/core/connect-data-platform/connection-profiles",
     "dbtVersionFocus": "Targets and profiles"
   },
@@ -785,9 +784,7 @@ export const formatQuestions: Question[] = [
     "format": "build_list",
     "category": "Debug Data Models",
     "difficulty": "Intermediate",
-    "questionText": "The log below comes from a `dbt build` in which `fct_orders` depends on `stg_orders`. Order what dbt did, from first to last.",
-    "codeSnippet": "1 of 3 OK created sql view model staging.stg_orders ....... [OK]\n2 of 3 FAIL 23 not_null_stg_orders_order_id ............... [FAIL 23]\n3 of 3 SKIP relation marts.fct_orders ..................... [SKIP]",
-    "codeLanguage": "text",
+    "questionText": "In a `dbt build`, `fct_orders` depends on `stg_orders`, and the `not_null` test on `stg_orders.order_id` fails with 23 rows. Order what dbt did, from first to last.",
     "items": [
       "Built the model `stg_orders`",
       "Ran the `not_null` test on `stg_orders.order_id`",
@@ -864,7 +861,7 @@ export const formatQuestions: Question[] = [
     "format": "hotspot",
     "category": "Develop Models",
     "difficulty": "Basic",
-    "questionText": "The incremental model below receives updated versions of orders it has already loaded. Click the line that makes dbt update an existing row when its `order_id` is already in the target table, instead of inserting a duplicate.",
+    "questionText": "The incremental model below uses the adapter's default incremental strategy and receives updated versions of orders it has already loaded. Click the line that makes dbt update the existing row for a changed order instead of inserting a duplicate.",
     "codeSnippet": "{{\n    config(\n        materialized='incremental',\n        unique_key='order_id',\n        on_schema_change='fail'\n    )\n}}\n\nselect order_id, customer_id, status, updated_at\nfrom {{ ref('stg_orders') }}\n{% if is_incremental() %}\nwhere updated_at > (select max(updated_at) from {{ this }})\n{% endif %}",
     "codeLanguage": "sql",
     "target": {
@@ -873,7 +870,7 @@ export const formatQuestions: Question[] = [
         4
       ]
     },
-    "explanation": "CORRECT ACTION:\n`unique_key='order_id'` identifies a single row. When a new row has the same key as a row already in the target table, dbt updates or replaces the old row instead of appending a second one.\n\nCOMMON MISTAKES:\n- `where updated_at > (select max(updated_at) from {{ this }})`: this filter limits which source rows are read on an incremental run, but without a unique key most adapters append every returned row, so changed orders would be duplicated.\n- `materialized='incremental'`: this makes the model incremental but does not say how matching rows are identified.\n- `on_schema_change='fail'`: this controls what happens when the model's columns change, not how rows are matched.",
+    "explanation": "CORRECT ACTION:\n`unique_key='order_id'` identifies a single row. With the default incremental strategy, when a new row has the same key as a row already in the target table, dbt updates or replaces the old row instead of appending a second one.\n\nCOMMON MISTAKES:\n- `where updated_at > (select max(updated_at) from {{ this }})`: this filter limits which source rows are read on an incremental run, but without a unique key most adapters append every returned row, so changed orders would be duplicated.\n- `materialized='incremental'`: this makes the model incremental but does not say how matching rows are identified.\n- `on_schema_change='fail'`: this controls what happens when the model's columns change, not how rows are matched.",
     "references": "https://docs.getdbt.com/docs/build/incremental-models",
     "dbtVersionFocus": "Incremental models"
   },
@@ -882,8 +879,8 @@ export const formatQuestions: Question[] = [
     "format": "hotspot",
     "category": "Develop Models",
     "difficulty": "Intermediate",
-    "questionText": "In the warehouse, the table read by `{{ source('stripe', 'payments') }}` is named `tbl_payments_v2`. Click the line that tells dbt the physical table name behind the source table `payments`.",
-    "codeSnippet": "sources:\n  - name: stripe\n    database: raw\n    schema: payments_raw\n    tables:\n      - name: payments\n        identifier: tbl_payments_v2\n        config:\n          loaded_at_field: _loaded_at\n      - name: refunds",
+    "questionText": "In the warehouse, the table that `{{ source('stripe', 'payments') }}` must read is not named `payments`. Click the line that tells dbt the physical table name behind the source table `payments`.",
+    "codeSnippet": "sources:\n  - name: stripe\n    database: raw\n    schema: payments_raw\n    tables:\n      - name: payments\n        identifier: payments_v2\n        config:\n          loaded_at_field: _loaded_at\n      - name: refunds",
     "codeLanguage": "yaml",
     "target": {
       "kind": "code_lines",
@@ -891,7 +888,7 @@ export const formatQuestions: Question[] = [
         7
       ]
     },
-    "explanation": "CORRECT ACTION:\n`identifier: tbl_payments_v2` sets the actual name of the table in the warehouse. The source table keeps the name `payments` in `source()` calls, and dbt resolves it to `tbl_payments_v2`.\n\nCOMMON MISTAKES:\n- `- name: payments`: this is the name used inside `source('stripe', 'payments')`, not the name of the table in the warehouse.\n- `schema: payments_raw`: this sets the schema that holds the tables, not a table name.\n- `loaded_at_field: _loaded_at`: this names the timestamp column used for freshness checks and has no effect on which table is read.",
+    "explanation": "CORRECT ACTION:\n`identifier: payments_v2` sets the actual name of the table in the warehouse. The source table keeps the name `payments` in `source()` calls, and dbt resolves it to `payments_v2`.\n\nCOMMON MISTAKES:\n- `- name: payments`: this is the name used inside `source('stripe', 'payments')`, not the name of the table in the warehouse.\n- `schema: payments_raw`: this sets the schema that holds the tables, not a table name.\n- `loaded_at_field: _loaded_at`: this names the timestamp column used for freshness checks and has no effect on which table is read.",
     "references": "https://docs.getdbt.com/reference/source-properties",
     "dbtVersionFocus": "Source properties"
   },
@@ -996,7 +993,7 @@ export const formatQuestions: Question[] = [
     "format": "hotspot",
     "category": "Debug Data Models",
     "difficulty": "Basic",
-    "questionText": "`dbt run` sometimes builds `dim_customers` before `stg_orders`, and the run fails because `stg_orders` does not exist yet. Click the line that causes the wrong build order.",
+    "questionText": "`dbt run` sometimes builds `dim_customers` before one of the models it selects from, and the run fails because that model does not exist yet. Click the line that causes the wrong build order.",
     "codeSnippet": "{{ config(materialized='table') }}\n\nselect\n    c.customer_id,\n    c.customer_name,\n    count(o.order_id) as order_count\nfrom {{ ref('stg_customers') }} as c\nleft join analytics.stg_orders as o\n    on c.customer_id = o.customer_id\ngroup by 1, 2",
     "codeLanguage": "sql",
     "target": {
@@ -1032,8 +1029,8 @@ export const formatQuestions: Question[] = [
     "format": "hotspot",
     "category": "Debug Data Models",
     "difficulty": "Advanced",
-    "questionText": "`dbt run` fails with an error about the enforced contract on `dim_customers`. Click the line that causes the error.",
-    "codeSnippet": "models:\n  - name: dim_customers\n    config:\n      contract:\n        enforced: true\n    columns:\n      - name: customer_id\n        data_type: int\n        constraints:\n          - type: not_null\n      - name: customer_name\n        data_type: string\n      - name: created_at\n      - name: country_code\n        data_type: string",
+    "questionText": "The SQL of `dim_customers` returns exactly the four columns listed below, and each declared `data_type` matches the type the SQL returns. `dbt run` fails with an error about the enforced contract on `dim_customers`. Click the line that causes the error.",
+    "codeSnippet": "models:\n  - name: dim_customers\n    config:\n      contract:\n        enforced: true\n    columns:\n      - name: customer_id\n        data_type: int\n        constraints:\n          - type: not_null\n      - name: customer_name\n        data_type: string\n      - name: created_at\n        description: When the customer record was created.\n      - name: country_code\n        data_type: string\n        description: ISO 3166-1 alpha-2 country code.",
     "codeLanguage": "yaml",
     "target": {
       "kind": "code_lines",
@@ -1041,7 +1038,7 @@ export const formatQuestions: Question[] = [
         13
       ]
     },
-    "explanation": "CORRECT ACTION:\nWhen a contract is enforced, every column must have a `name` and a `data_type`. `- name: created_at` has no `data_type`, so the contract is invalid.\n\nCOMMON MISTAKES:\n- `enforced: true`: this is the valid way to turn the contract on, nested under `contract` in `config`.\n- `- type: not_null`: a constraint is optional and `not_null` is a valid constraint type, so it is not the cause.\n- `data_type: int`: a declared data type is what the contract requires, and `int` is a type the warehouse understands.",
+    "explanation": "CORRECT ACTION:\nWhen a contract is enforced, every column must have a `name` and a `data_type`. `- name: created_at` has a `description` but no `data_type`, so the contract is invalid.\n\nCOMMON MISTAKES:\n- `enforced: true`: this is the valid way to turn the contract on, nested under `contract` in `config`.\n- `- type: not_null`: a constraint is optional and `not_null` is a valid constraint type, so it is not the cause.\n- `data_type: int`: a declared data type is what the contract requires, and `int` is a type the warehouse understands.",
     "references": "https://docs.getdbt.com/docs/mesh/govern/model-contracts",
     "dbtVersionFocus": "Model contracts"
   },
@@ -1137,7 +1134,7 @@ export const formatQuestions: Question[] = [
     "format": "hotspot",
     "category": "Test and Document Models",
     "difficulty": "Intermediate",
-    "questionText": "Click the line that sets the number of failing rows at which this `relationships` test returns an error instead of a warning.",
+    "questionText": "Click the line that sets how many failing rows make this `relationships` test report a failure instead of a warning.",
     "codeSnippet": "models:\n  - name: fct_orders\n    columns:\n      - name: customer_id\n        data_tests:\n          - relationships:\n              arguments:\n                to: ref('dim_customers')\n                field: customer_id\n              config:\n                severity: error\n                warn_if: \">0\"\n                error_if: \">10\"",
     "codeLanguage": "yaml",
     "target": {
@@ -1155,8 +1152,8 @@ export const formatQuestions: Question[] = [
     "format": "hotspot",
     "category": "Test and Document Models",
     "difficulty": "Basic",
-    "questionText": "Click the line whose description is read from a `docs` block defined in a markdown file.",
-    "codeSnippet": "models:\n  - name: fct_orders\n    description: One row per completed order.\n    columns:\n      - name: order_id\n        description: Primary key of the order.\n        data_tests:\n          - unique\n      - name: status\n        description: '{{ doc(\"order_status\") }}'\n        data_tests:\n          - accepted_values:\n              arguments:\n                values: ['placed', 'shipped', 'returned']",
+    "questionText": "Click the line whose description text is written in a Markdown file elsewhere in the project instead of in this YAML file.",
+    "codeSnippet": "models:\n  - name: fct_orders\n    description: One row per completed order.\n    columns:\n      - name: order_id\n        description: Primary key of the order, as in **stg_orders**.\n        data_tests:\n          - unique\n      - name: status\n        description: '{{ doc(\"order_status\") }}'\n        data_tests:\n          - accepted_values:\n              arguments:\n                values: ['placed', 'shipped', 'returned']",
     "codeLanguage": "yaml",
     "target": {
       "kind": "code_lines",
@@ -1164,7 +1161,7 @@ export const formatQuestions: Question[] = [
         10
       ]
     },
-    "explanation": "CORRECT ACTION:\n`description: '{{ doc(\"order_status\") }}'` uses the `doc()` function, which expands to the markdown written in the `order_status` block (`{% docs order_status %}`) of a `.md` file.\n\nCOMMON MISTAKES:\n- `description: One row per completed order.`: this is a plain-text model description written directly in the YAML.\n- `description: Primary key of the order.`: this is a plain-text column description written directly in the YAML.\n- `values: ['placed', 'shipped', 'returned']`: these are the arguments of the `accepted_values` test and do not describe anything.",
+    "explanation": "CORRECT ACTION:\n`description: '{{ doc(\"order_status\") }}'` uses the `doc()` function, which expands to the markdown written in the `order_status` block (`{% docs order_status %}`) of a `.md` file.\n\nCOMMON MISTAKES:\n- `description: One row per completed order.`: this is a plain-text model description written directly in the YAML.\n- `description: Primary key of the order, as in **stg_orders**.`: the Markdown formatting is rendered in the docs site, but the text is written directly in the YAML.\n- `values: ['placed', 'shipped', 'returned']`: these are the arguments of the `accepted_values` test and do not describe anything.",
     "references": "https://docs.getdbt.com/docs/build/documentation",
     "dbtVersionFocus": "Docs blocks"
   },
@@ -1267,16 +1264,16 @@ export const formatQuestions: Question[] = [
     "format": "hotspot",
     "category": "Deploy dbt Projects",
     "difficulty": "Intermediate",
-    "questionText": "The CI job below runs on a schedule. Click the line that builds only the models downstream of sources that received new data since the previous freshness check.",
-    "codeSnippet": "build_fresh:\n  stage: deploy\n  script:\n    - dbt deps\n    - dbt source freshness\n    - dbt build --select \"source_status:fresher+\" --state ./previous-artifacts\n    - dbt docs generate\n  rules:\n    - if: $CI_PIPELINE_SOURCE == \"schedule\"",
+    "questionText": "The job below runs on a schedule, and `./previous-artifacts` holds the artifacts of the previous run. Click the line that builds only the models downstream of sources that have loaded new data since the previous run.",
+    "codeSnippet": "scheduled_build:\n  stage: deploy\n  script:\n    - dbt deps\n    - dbt source freshness\n    - dbt build --select \"state:modified+\" --state ./previous-artifacts\n    - dbt build --select \"source_status:fresher+\" --state ./previous-artifacts\n    - dbt build --select \"result:error+\" --state ./previous-artifacts\n    - dbt build --select \"source:stripe+\"\n  rules:\n    - if: $CI_PIPELINE_SOURCE == \"schedule\"",
     "codeLanguage": "yaml",
     "target": {
       "kind": "code_lines",
       "correctLines": [
-        6
+        7
       ]
     },
-    "explanation": "CORRECT ACTION:\n`dbt build --select \"source_status:fresher+\" --state ./previous-artifacts` compares the current freshness results with the previous ones and selects the sources with newer data plus everything downstream of them. The `+` adds the downstream nodes.\n\nCOMMON MISTAKES:\n- `dbt source freshness`: this command produces the freshness results that `source_status:fresher+` compares, but it does not build any model.\n- `dbt docs generate`: this command builds documentation artifacts and does not select or build models.\n- `dbt deps`: this command installs packages and does not select or build models.",
+    "explanation": "CORRECT ACTION:\n`dbt build --select \"source_status:fresher+\" --state ./previous-artifacts` compares the current freshness results with the previous ones and selects the sources with newer data plus everything downstream of them. The `+` adds the downstream nodes.\n\nCOMMON MISTAKES:\n- `dbt build --select \"state:modified+\" --state ./previous-artifacts`: this selects nodes whose code or config changed compared with the previous manifest, not sources with new data.\n- `dbt build --select \"result:error+\" --state ./previous-artifacts`: this selects nodes that errored in the previous run, based on `run_results.json`, not sources with new data.\n- `dbt build --select \"source:stripe+\"`: this selects everything downstream of the `stripe` source on every run, whether or not it has loaded new data.\n- `dbt source freshness`: this command produces the freshness results that `source_status:fresher+` compares, but it does not build any model.",
     "references": "https://docs.getdbt.com/reference/node-selection/methods",
     "dbtVersionFocus": "The source_status selector"
   },

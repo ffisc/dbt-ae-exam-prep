@@ -452,7 +452,8 @@ export default function App() {
     recordGraded(newlyGraded);
 
     const scorePercentage = Math.round((correctCount / session.questions.length) * 100);
-    const hasPassed = scorePercentage >= 65; // standard dbt exam passing grade is 65%
+    // Only the full-length mock exam is judged against the exam's 65% pass mark; practice sessions are too short to predict a result.
+    const hasPassed = session.mode === "MOCK_EXAM" ? scorePercentage >= 65 : undefined;
 
     const timeEllapsed =
       session.mode === "MOCK_EXAM"
@@ -1382,6 +1383,24 @@ export default function App() {
           {/* Header Status Result */}
           <div className="bg-white rounded-2xl border border-gray-200 p-8 shadow-sm flex flex-col md:flex-row items-center gap-8 justify-between relative overflow-hidden">
 
+            {session.passed === undefined ? (
+              <div className="flex items-center gap-6 text-center md:text-left flex-col md:flex-row">
+                <div className="w-20 h-20 rounded-full flex items-center justify-center shrink-0 bg-[#FFF5F2] text-[#FF694B]">
+                  <BookOpenCheck className="w-10 h-10" />
+                </div>
+                <div>
+                  <span className="px-3 py-1 rounded text-[10px] font-bold uppercase tracking-wider bg-gray-100 text-gray-700">
+                    {MODE_LABELS[session.mode]}
+                  </span>
+                  <h1 className="text-2xl font-bold text-gray-900 mt-2">
+                    {session.questions.filter((q) => isCorrect(q, session.userAnswers[q.id], session.presentations[q.id])).length} of {session.questions.length} correct
+                  </h1>
+                  <p className="text-xs text-gray-500 mt-1 max-w-md">
+                    Practice sessions have no pass mark: they are too short to predict an exam result. Take the full mock exam for a pass or fail against the 65% target.
+                  </p>
+                </div>
+              </div>
+            ) : (
             <div className="flex items-center gap-6 text-center md:text-left flex-col md:flex-row">
               <div className={`w-20 h-20 rounded-full flex items-center justify-center shrink-0 ${
                 session.passed ? "bg-green-100 text-green-600 animate-bounce" : "bg-red-100 text-red-500"
@@ -1410,6 +1429,7 @@ export default function App() {
                 </p>
               </div>
             </div>
+            )}
 
             {/* Score Ring Gauge */}
             <div className="flex flex-col items-center shrink-0">
@@ -1430,7 +1450,7 @@ export default function App() {
                     cx="48"
                     cy="48"
                     r="42"
-                    stroke={session.passed ? "#16A34A" : "#EF4444"}
+                    stroke={session.passed === undefined ? "#FF694B" : session.passed ? "#16A34A" : "#EF4444"}
                     strokeWidth="8"
                     fill="transparent"
                     strokeDasharray={2 * Math.PI * 42}
