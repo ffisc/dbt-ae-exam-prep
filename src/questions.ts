@@ -248,7 +248,7 @@ models:
   {
     id: 13,
     category: "Test and Document Models",
-    difficulty: "Associate",
+    difficulty: "Basic",
     questionText: "To monitor raw data feeds arriving from an external pipeline, you want dbt to alert you if a table has not been updated in the last 24 hours. Where and how should this be configured?",
     codeSnippet: `sources:
   - name: internal_sales
@@ -359,7 +359,7 @@ dbt run --vars '{"source_database": "raw_sales_dev"}'`,
   {
     id: 18,
     category: "Test and Document Models",
-    difficulty: "Associate",
+    difficulty: "Basic",
     questionText: "What is the key difference between generic tests and singular tests in `dbt test` suites?",
     options: [
       "Generic tests are SQL files in `tests/` that return failing rows, while singular tests are declared in YAML.",
@@ -394,7 +394,7 @@ select * from {{ ref('raw_source') }}`,
   {
     id: 20,
     category: "Deploy dbt Projects",
-    difficulty: "Associate",
+    difficulty: "Basic",
     questionText: "You are setting up a `dbt run` inside standard scheduling software. You want your jobs to clear old local artifacts, fetch external packages, and then build your models. Which sequence of dbt commands is correct?",
     options: [
       "`dbt run` -> `dbt test` -> `dbt docs generate`",
@@ -532,7 +532,7 @@ select * from {{ ref('raw_source') }}`,
   {
     id: 27,
     category: "Develop Models",
-    difficulty: "Associate",
+    difficulty: "Basic",
     questionText: "Under what conditions is it appropriate to configure and load data using a dbt seed rather than building a model?",
     options: [
       "Seeds suit large raw data exports, since `dbt seed` loads files of any size efficiently.",
@@ -612,7 +612,7 @@ select * from {{ ref('raw_source') }}`,
   {
     id: 32,
     category: "Test and Document Models",
-    difficulty: "Associate",
+    difficulty: "Basic",
     questionText: "To avoid cluttering schema YAML files with very long, multi-line paragraph descriptions of dbt models or columns, which feature should you use to separate descriptions into clean dedicated markdown files?",
     options: [
       "Use YAML anchors to reuse the description text across the properties files.",
@@ -796,7 +796,7 @@ select * from {{ ref('raw_source') }}`,
   {
     id: 43,
     category: "Develop Models",
-    difficulty: "Associate",
+    difficulty: "Basic",
     questionText: "Which statement accurately describes the compilation and lineage difference between referencing a raw table using the standard `source('source_name', 'table_name')` Jinja function versus referencing a model using the `ref('model_name')` function in dbt?",
     options: [
       "`source` references tables loaded outside dbt; `ref` references dbt models and sets build order.",
@@ -929,7 +929,7 @@ select * from {{ ref('raw_source') }}`,
   {
     id: 51,
     category: "Debug Data Models",
-    difficulty: "Associate",
+    difficulty: "Basic",
     questionText: "When onboarding a new analytics developer, they run `dbt debug`. What is the primary purpose of this command compared to `dbt compile` or `dbt run`?",
     options: [
       "It compiles all macros in the project and checks them for circular imports.",
@@ -1256,7 +1256,7 @@ select * from {{ ref('raw_source') }}`,
   {
     id: 71,
     category: "Develop Models",
-    difficulty: "Associate",
+    difficulty: "Basic",
     questionText: "When auditing a historical snapshot table, which automatically generated column evaluates to NULL for rows reflecting the current, active state of a record?",
     options: [
       "`dbt_valid_from`",
@@ -1305,7 +1305,7 @@ select * from {{ ref('raw_source') }}`,
   {
     id: 74,
     category: "Test and Document Models",
-    difficulty: "Associate",
+    difficulty: "Basic",
     questionText: "When planning a dbt transformation strategy, why is storing large, frequently updated transactional tables as dbt seeds considered a major anti-pattern?",
     options: [
       "Seeds are materialized as views, so downstream queries rescan the CSV on every run.",
@@ -1679,7 +1679,7 @@ dbt run --select "tag:hourly path:models/staging"`,
   {
     id: 93,
     category: "Test and Document Models",
-    difficulty: "Associate",
+    difficulty: "Basic",
     questionText: "When designing data testing strategies, a developer adds a custom SQL script containing assertions directly into the `tests/` directory. How does dbt evaluate success or failure for these singular tests?",
     options: [
       "A test passes when the query returns a single row containing `true`, and fails otherwise.",
@@ -1868,7 +1868,7 @@ models:
   {
     id: 103,
     category: "Deploy dbt Projects",
-    difficulty: "Associate",
+    difficulty: "Basic",
     questionText: "A developer checks in multiple profile target connections inside their local `profiles.yml` configuration file under an active project named `ecommerce`. If they execute `dbt run` from their local terminal, how does dbt know which target connection (e.g., `dev` vs `prod`) to connect with?",
     codeSnippet: `ecommerce:
   target: dev_john

@@ -873,7 +873,7 @@ export default function App() {
 
       {/* ===================== ACTIVE EXAM CORE INTERFACE ===================== */}
       {screen === "EXAM" && session && currentQuestion && (
-        <div id="exam-dashboard" className="flex-1 flex flex-col overflow-hidden h-screen">
+        <div id="exam-dashboard" className="flex flex-col overflow-hidden h-dvh shrink-0">
           
           {/* Top Navigation / Progress Header */}
           <header className="h-16 bg-white border-b border-gray-200 flex items-center justify-between px-6 shrink-0 z-10 shadow-sm">
@@ -970,7 +970,7 @@ export default function App() {
           </header>
 
           {/* Main Workspace Frame */}
-          <div className="flex-1 flex overflow-hidden relative">
+          <div className="flex-1 min-h-0 flex overflow-hidden relative">
             
             {/* Sidebar with Grid selector */}
             {isSidebarOpen && (
@@ -1138,8 +1138,8 @@ export default function App() {
             )}
 
             {/* Content Area for active question */}
-            <section className="flex-1 bg-white flex flex-col overflow-hidden relative">
-              <div className="flex-1 overflow-y-auto p-6 md:p-10 pb-32">
+            <section className="flex-1 min-h-0 bg-white flex flex-col overflow-hidden relative">
+              <div className="flex-1 min-h-0 overflow-y-auto p-6 md:p-10 pb-32 md:pb-32">
                 <div className="max-w-3xl mx-auto w-full">
                   
                   {/* Category, Difficulty, and Pre-Answer Docs Reference Link */}
@@ -1381,15 +1381,6 @@ export default function App() {
 
           {/* Header Status Result */}
           <div className="bg-white rounded-2xl border border-gray-200 p-8 shadow-sm flex flex-col md:flex-row items-center gap-8 justify-between relative overflow-hidden">
-            
-            {/* Visual status backdrops */}
-            <div className="absolute top-0 right-0 w-32 h-32 opacity-[0.03] select-none pointer-events-none">
-              {session.passed ? (
-                <CheckCircle className="w-full h-full text-green-600" />
-              ) : (
-                <XCircle className="w-full h-full text-red-600" />
-              )}
-            </div>
 
             <div className="flex items-center gap-6 text-center md:text-left flex-col md:flex-row">
               <div className={`w-20 h-20 rounded-full flex items-center justify-center shrink-0 ${
@@ -1521,10 +1512,10 @@ export default function App() {
               </div>
 
               {/* Action Buttons footer */}
-              <div className="flex flex-col sm:flex-row gap-4 mt-8 pt-6 border-t border-gray-100">
+              <div className="flex flex-wrap gap-3 mt-8 pt-6 border-t border-gray-100">
                 <button
                   onClick={() => goTo("WELCOME")}
-                  className="flex-1 py-3 bg-[#1A1A1A] hover:bg-[#FF694B] text-white text-xs font-bold uppercase tracking-wider rounded-xl transition-colors cursor-pointer flex items-center justify-center gap-2"
+                  className="flex-auto whitespace-nowrap px-5 py-3 bg-[#1A1A1A] hover:bg-[#FF694B] text-white text-xs font-bold uppercase tracking-wider rounded-xl transition-colors cursor-pointer flex items-center justify-center gap-2"
                 >
                   <RotateCcw className="w-4 h-4" /> Back to Dashboard
                 </button>
@@ -1536,7 +1527,7 @@ export default function App() {
                       startNewSession(session.mode);
                     }
                   }}
-                  className="flex-1 py-3 border border-gray-300 hover:border-[#FF694B] hover:text-[#FF694B] text-gray-700 text-xs font-bold uppercase tracking-wider rounded-xl cursor-pointer transition-colors flex items-center justify-center gap-2"
+                  className="flex-auto whitespace-nowrap px-5 py-3 border border-gray-300 hover:border-[#FF694B] hover:text-[#FF694B] text-gray-700 text-xs font-bold uppercase tracking-wider rounded-xl cursor-pointer transition-colors flex items-center justify-center gap-2"
                 >
                   <Play className="w-4 h-4" /> Retry Test Session
                 </button>

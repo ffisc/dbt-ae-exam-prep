@@ -1,5 +1,5 @@
 export type Category = "Develop Models" | "Debug Data Models" | "Test and Document Models" | "Deploy dbt Projects";
-export type Difficulty = "Associate" | "Intermediate" | "Advanced";
+export type Difficulty = "Basic" | "Intermediate" | "Advanced";
 
 interface QuestionBase {
   id: number;

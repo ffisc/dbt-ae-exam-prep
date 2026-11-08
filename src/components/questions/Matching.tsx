@@ -18,6 +18,7 @@ export default function Matching({ question, answer, onAnswer, choiceOrder, reve
   const picks = answer?.kind === "matching" ? answer.picks : question.prompts.map(() => null);
   const locked = revealed || readOnly;
   const letterOf = (choiceIndex: number) => letter(choiceOrder.indexOf(choiceIndex));
+  const unusedChoices = question.choices.length - new Set(question.matches).size;
 
   const pick = (promptIndex: number, value: string) => {
     const next = question.prompts.map((_, i) => (i === promptIndex ? (value === "" ? null : Number(value)) : picks[i] ?? null));
@@ -27,7 +28,14 @@ export default function Matching({ question, answer, onAnswer, choiceOrder, reve
   return (
     <div className="space-y-5">
       <div className="space-y-2">
-        <p className="text-xs text-gray-500 font-medium">Choices</p>
+        <p className="text-xs text-gray-500 font-medium">
+          Choices
+          {unusedChoices > 0 && (
+            <span className="text-gray-400">
+              {" "}· {unusedChoices === 1 ? "one choice is not used" : `${unusedChoices} choices are not used`}
+            </span>
+          )}
+        </p>
         {choiceOrder.map((choiceIndex, position) => (
           <div key={choiceIndex} className="flex items-start gap-3 p-3 border border-gray-200 rounded-lg bg-white text-xs md:text-sm">
             <span className="w-6 h-6 shrink-0 rounded bg-gray-100 text-gray-700 font-bold flex items-center justify-center text-xs">{letter(position)}</span>
