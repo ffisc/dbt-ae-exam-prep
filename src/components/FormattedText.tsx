@@ -1,4 +1,5 @@
 import React from "react";
+import { BlankMarker } from "./questions/CodeBlock";
 
 interface FormattedTextProps {
   text: string;
@@ -10,9 +11,17 @@ interface FormattedTextProps {
  * Parses inline string for `code` and **bold** syntax
  */
 export function renderInlineContent(content: string, dark = false): React.ReactNode[] {
-  // Matches `code` or **bold**
-  const tokens = content.split(/(`[^`]+`|\*\*[^*]+\*\*)/g);
+  // Matches `code`, **bold**, or a [[n]] fill-in-the-blank marker
+  const tokens = content.split(/(`[^`]+`|\*\*[^*]+\*\*|\[\[\d+\]\])/g);
   return tokens.map((token, i) => {
+    const blank = token.match(/^\[\[(\d+)\]\]$/);
+    if (blank) {
+      return (
+        <React.Fragment key={i}>
+          <BlankMarker n={Number(blank[1])} dark={dark} />
+        </React.Fragment>
+      );
+    }
     if (token.startsWith("`") && token.endsWith("`") && token.length >= 2) {
       const codeVal = token.slice(1, -1);
       return (
@@ -94,15 +103,17 @@ export function FormattedExplanation({
           );
         }
 
-        if (trimmed.startsWith("INCORRECT COMPETING OPTIONS:")) {
-          const body = trimmed.replace(/^INCORRECT COMPETING OPTIONS:\s*/, "");
+        const mistakesHeader = trimmed.match(/^(INCORRECT COMPETING OPTIONS|COMMON MISTAKES):\s*/);
+        if (mistakesHeader) {
+          const body = trimmed.slice(mistakesHeader[0].length);
+          const label = mistakesHeader[1] === "COMMON MISTAKES" ? "Common Mistakes" : "Why Other Options Are Incorrect";
           const bulletLines = body.split("\n").filter((l) => l.trim().length > 0);
 
           return (
             <div key={pIdx} className="space-y-2 pt-2 border-t border-gray-200/80 mt-3">
               <div className="inline-flex items-center gap-1.5 px-2 py-0.5 bg-amber-100 text-amber-800 font-bold uppercase tracking-wider text-[10px] rounded border border-amber-200">
                 <span className="w-1.5 h-1.5 rounded-full bg-amber-600"></span>
-                Why Other Options Are Incorrect
+                {label}
               </div>
               <ul className="space-y-2 mt-2">
                 {bulletLines.map((line, lIdx) => {

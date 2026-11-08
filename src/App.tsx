@@ -26,39 +26,30 @@ import {
   PanelLeftClose,
   PanelLeftOpen
 } from "lucide-react";
-import { Question, ExamMode, ExamSession } from "./types";
-import { examQuestions } from "./questions";
+import { Answer, Question, ExamMode, ExamSession, QuestionFormat } from "./types";
+import { allQuestions as examQuestions } from "./questionBank";
 import DbtMeshVisualizer from "./components/DbtMeshVisualizer";
 import FormattedText, { FormattedExplanation } from "./components/FormattedText";
+import QuestionBody from "./components/questions/QuestionBody";
 import {
   AnswerHistory,
-  isAnswerCorrect,
   loadHistory,
   pickPracticeQuestions,
   recordResults,
   saveHistory,
   statusOf,
 } from "./answerHistory";
+import { formatOf, isAnswered, isCorrect } from "./grading";
+import { buildSessionLayout, MOCK_EXAM_SIZE, pickMockExam, shuffle } from "./sessionBuilder";
 
-/** Fisher-Yates shuffle; returns a new array. */
-function shuffle<T>(items: T[]): T[] {
-  const result = [...items];
-  for (let i = result.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [result[i], result[j]] = [result[j], result[i]];
-  }
-  return result;
-}
-
-/** Shuffles a question's options and remaps correctAnswers to the new positions. */
-function shuffleOptions(question: Question): Question {
-  const order = shuffle(question.options.map((_, i) => i));
-  return {
-    ...question,
-    options: order.map((i) => question.options[i]),
-    correctAnswers: question.correctAnswers.map((c) => order.indexOf(c)),
-  };
-}
+const FORMAT_LABELS: Record<QuestionFormat | "domc", string> = {
+  multiple_choice: "Multiple choice",
+  domc: "DOMC",
+  fill_blank: "Fill in the blank",
+  matching: "Matching",
+  build_list: "Build list",
+  hotspot: "Hotspot",
+};
 
 type Screen = "WELCOME" | "EXAM" | "RESULT";
 
@@ -345,8 +336,8 @@ export default function App() {
     let selectedQuestionsList: Question[] = [];
 
     if (mode === "MOCK_EXAM") {
-      // The full bank, shuffled, as in the real exam.
-      selectedQuestionsList = shuffle(examQuestions);
+      // 65 questions in the real exam's mix of formats and domains.
+      selectedQuestionsList = pickMockExam(examQuestions);
       setTimeLeft(120 * 60); // 120 minutes (7,200 seconds) countdown
     } else if (mode === "QUICK_QUIZ") {
       selectedQuestionsList = pickPracticeQuestions(examQuestions, answerHistory, shuffle, 10);
@@ -367,7 +358,7 @@ export default function App() {
       targetDomain: domainFilter,
       startTime: Date.now(),
       timeSpent: 0,
-      questions: selectedQuestionsList.map(shuffleOptions),
+      ...buildSessionLayout(selectedQuestionsList, mode === "MOCK_EXAM" ? "mock" : "practice"),
       userAnswers: {},
       flaggedQuestions: [],
       completed: false
@@ -383,38 +374,17 @@ export default function App() {
   // Active question getters
   const currentQuestion: Question | undefined = session?.questions[currentQuestionIndex];
 
-  // Option select handler
-  const handleOptionSelect = (optionIndex: number) => {
+  const presentationOf = (q: Question) => session?.presentations[q.id] ?? "standard";
+  const answeredCount = session
+    ? session.questions.filter((q) => isAnswered(q, session.userAnswers[q.id], presentationOf(q))).length
+    : 0;
+  const currentIsAnswered = !!session && !!currentQuestion && isAnswered(currentQuestion, session.userAnswers[currentQuestion.id], presentationOf(currentQuestion));
+
+  // Stores the answer to the current question (each format component builds its own Answer value).
+  const setCurrentAnswer = (answer: Answer) => {
     if (!session || !currentQuestion || userCheckedCurrent) return;
-
     const questionId = currentQuestion.id;
-    const correctAnsCount = currentQuestion.correctAnswers.length;
-
-    setSession((prev) => {
-      if (!prev) return null;
-      const curAnswers = prev.userAnswers[questionId] || [];
-
-      let updatedAnswers: number[] = [];
-      if (correctAnsCount === 1) {
-        // Single selection
-        updatedAnswers = [optionIndex];
-      } else {
-        // Multi-selection (checkbox behavior)
-        if (curAnswers.includes(optionIndex)) {
-          updatedAnswers = curAnswers.filter((idx) => idx !== optionIndex);
-        } else {
-          updatedAnswers = [...curAnswers, optionIndex];
-        }
-      }
-
-      return {
-        ...prev,
-        userAnswers: {
-          ...prev.userAnswers,
-          [questionId]: updatedAnswers
-        }
-      };
-    });
+    setSession((prev) => (prev ? { ...prev, userAnswers: { ...prev.userAnswers, [questionId]: answer } } : null));
   };
 
   // Practice mode: reveal the answer to the current question and record the result.
@@ -422,8 +392,8 @@ export default function App() {
     if (!session || !currentQuestion) return;
     setUserCheckedCurrent(true);
     if (recordedInSessionRef.current.has(currentQuestion.id)) return;
-    const answers = session.userAnswers[currentQuestion.id] || [];
-    recordGraded([{ questionId: currentQuestion.id, correct: isAnswerCorrect(currentQuestion, answers) }]);
+    const correct = isCorrect(currentQuestion, session.userAnswers[currentQuestion.id], presentationOf(currentQuestion));
+    recordGraded([{ questionId: currentQuestion.id, correct }]);
   };
 
   // Flag toggle
@@ -459,7 +429,8 @@ export default function App() {
     const newlyGraded: { questionId: number; correct: boolean }[] = [];
 
     session.questions.forEach((q) => {
-      const answers = session.userAnswers[q.id] || [];
+      const answer = session.userAnswers[q.id];
+      const presentation = presentationOf(q);
 
       // Initialize domain stats
       if (!categoryScores[q.category]) {
@@ -467,15 +438,15 @@ export default function App() {
       }
       categoryScores[q.category].total += 1;
 
-      const isCorrect = isAnswerCorrect(q, answers);
-      if (isCorrect) {
+      const correct = isCorrect(q, answer, presentation);
+      if (correct) {
         correctCount += 1;
         categoryScores[q.category].correct += 1;
       }
 
       // Unanswered questions stay unseen in the history.
-      if (answers.length > 0 && !recordedInSessionRef.current.has(q.id)) {
-        newlyGraded.push({ questionId: q.id, correct: isCorrect });
+      if (isAnswered(q, answer, presentation) && !recordedInSessionRef.current.has(q.id)) {
+        newlyGraded.push({ questionId: q.id, correct });
       }
     });
     recordGraded(newlyGraded);
@@ -505,10 +476,10 @@ export default function App() {
     if (!session) return [];
     return session.questions.map((q, idx) => ({ q, idx })).filter(({ q }) => {
       const isFlagged = session.flaggedQuestions.includes(q.id);
-      const isAnswered = session.userAnswers[q.id] && session.userAnswers[q.id].length > 0;
+      const answered = isAnswered(q, session.userAnswers[q.id], session.presentations[q.id]);
 
       if (sidebarFilter === "FLAGGED") return isFlagged;
-      if (sidebarFilter === "UNANSWERED") return !isAnswered;
+      if (sidebarFilter === "UNANSWERED") return !answered;
       return true;
     });
   }, [session, sidebarFilter]);
@@ -615,7 +586,7 @@ export default function App() {
                       </div>
                       <h3 className="font-bold text-gray-900 text-md mb-1">Full Mock Exam</h3>
                       <p className="text-xs text-gray-600 leading-relaxed mb-4">
-                        Comprehensive simulation with 65+ questions under an authentic 120-minute proctored countdown timer. No instant answer hints during test.
+                        {MOCK_EXAM_SIZE} questions in the exam's mix of formats and domains, under a 120-minute countdown. No answer hints during the test.
                       </p>
                     </div>
                     <button
@@ -1013,14 +984,14 @@ export default function App() {
                     <div className="flex justify-between text-[11px] font-bold uppercase text-gray-500 mb-2">
                       <span>Your Progress</span>
                       <span>
-                        {Object.keys(session.userAnswers).length} of {session.questions.length} Questions
+                        {answeredCount} of {session.questions.length} Questions
                       </span>
                     </div>
                     <div className="w-full bg-gray-200 h-1.5 rounded-full overflow-hidden">
                       <div
                         className="bg-[#FF694B] h-1.5 rounded-full transition-all duration-300"
                         style={{
-                          width: `${(Object.keys(session.userAnswers).length / session.questions.length) * 100}%`
+                          width: `${(answeredCount / session.questions.length) * 100}%`
                         }}
                       ></div>
                     </div>
@@ -1066,16 +1037,16 @@ export default function App() {
                   <div className="grid grid-cols-5 gap-2">
                     {filteredQuestions.map(({ q, idx }) => {
                       const isActive = idx === currentQuestionIndex;
-                      const isAnswered = session.userAnswers[q.id] && session.userAnswers[q.id].length > 0;
+                      const answered = isAnswered(q, session.userAnswers[q.id], session.presentations[q.id]);
                       const isFlagged = session.flaggedQuestions.includes(q.id);
 
                       let styleClasses = "border-gray-200 bg-white text-gray-700 hover:border-gray-400";
-                      
+
                       if (isActive) {
                         styleClasses = "bg-[#1A1A1A] border-[#1A1A1A] text-white font-bold scale-105 shadow-sm";
                       } else if (isFlagged) {
                         styleClasses = "border-[#FF694B] bg-[#FFF5F2] text-[#FF694B] font-semibold";
-                      } else if (isAnswered) {
+                      } else if (answered) {
                         styleClasses = "border-gray-300 bg-gray-100 text-gray-500 hover:bg-gray-200";
                       }
 
@@ -1160,7 +1131,7 @@ export default function App() {
                     title="Show question sidebar"
                   >
                     <PanelLeftOpen className="w-4 h-4 text-[#FF694B]" />
-                    <span>Questions ({Object.keys(session.userAnswers).length}/{session.questions.length})</span>
+                    <span>Questions ({answeredCount}/{session.questions.length})</span>
                   </button>
                 </div>
               </>
@@ -1179,6 +1150,9 @@ export default function App() {
                       </span>
                       <span className="px-2 py-1 bg-gray-100 text-[10px] font-bold uppercase tracking-wider rounded text-gray-600">
                         {currentQuestion.difficulty}
+                      </span>
+                      <span className="px-2 py-1 bg-white border border-gray-300 text-[10px] font-bold uppercase tracking-wider rounded text-gray-700">
+                        {FORMAT_LABELS[presentationOf(currentQuestion) === "domc" ? "domc" : formatOf(currentQuestion)]}
                       </span>
 
                       {/* Official dbt Documentation Reference Link - Always accessible before answering */}
@@ -1209,97 +1183,28 @@ export default function App() {
                     <FormattedText text={currentQuestion.questionText} />
                   </h2>
 
-                  {/* Code snippet panel */}
-                  {currentQuestion.codeSnippet && (
-                    <div className="bg-[#151718] rounded-xl p-5 mb-6 font-mono text-xs md:text-sm leading-relaxed text-[#A9B1D6] shadow-inner border border-gray-800 relative group max-h-80 overflow-y-auto">
-                      <div className="absolute top-3 right-3 text-[10px] font-bold uppercase tracking-widest text-gray-600 group-hover:text-gray-400 transition-colors uppercase">
-                        {currentQuestion.codeLanguage || "code"}
-                      </div>
-                      <pre className="whitespace-pre-wrap select-text font-mono">{currentQuestion.codeSnippet}</pre>
-                    </div>
-                  )}
-
-                  {/* Multiple Choice Options List */}
-                  <div className="space-y-3.5">
-                    {currentQuestion.options.map((option, opIdx) => {
-                      const userAnswers = session.userAnswers[currentQuestion.id] || [];
-                      const isSelected = userAnswers.includes(opIdx);
-                      const isMultiSelect = currentQuestion.correctAnswers.length > 1;
-
-                      // Practice mode visual flags
-                      const isCorrectAnswer = currentQuestion.correctAnswers.includes(opIdx);
-                      let optionBorderClass = "border-gray-200 hover:border-gray-400 bg-white";
-                      let optionTagColorClass = "border-gray-300 text-gray-500 bg-gray-50";
-
-                      if (isSelected) {
-                        optionBorderClass = "border-[#FF694B] bg-[#FFF5F2]/40 ring-1 ring-[#FF694B]";
-                        optionTagColorClass = "bg-[#FF694B] text-white border-[#FF694B]";
-                      }
-
-                      // Apply overlays after matching practice check
-                      if (userCheckedCurrent) {
-                        if (isCorrectAnswer) {
-                          optionBorderClass = "border-green-600 bg-green-50/50 ring-1 ring-green-600";
-                          optionTagColorClass = "bg-green-600 text-white border-green-600";
-                        } else if (isSelected) {
-                          optionBorderClass = "border-red-500 bg-red-50/50 ring-1 ring-red-500";
-                          optionTagColorClass = "bg-red-500 text-white border-red-500";
-                        }
-                      }
-
-                      return (
-                        <div
-                          key={opIdx}
-                          onClick={() => handleOptionSelect(opIdx)}
-                          className={`flex items-start p-4 border rounded-xl cursor-pointer transition-all duration-200 relative select-text ${optionBorderClass}`}
-                        >
-                          {/* Circle or Check selection element */}
-                          <div className="mt-0.5 shrink-0 select-none">
-                            {isMultiSelect ? (
-                              <div className={`w-4 h-4 rounded border flex items-center justify-center text-white ${
-                                isSelected ? "bg-[#FF694B] border-[#FF694B]" : "bg-white border-gray-300"
-                              }`}>
-                                {isSelected && <Check className="w-3 h-3 stroke-[3]" />}
-                              </div>
-                            ) : (
-                              <div className={`w-4 h-4 rounded-full border flex items-center justify-center p-0.5 ${
-                                isSelected ? "border-[#FF694B]" : "border-gray-300"
-                              }`}>
-                                {isSelected && <div className="w-full h-full rounded-full bg-[#FF694B]" />}
-                              </div>
-                            )}
-                          </div>
-
-                          <div className="ml-4 text-xs md:text-sm text-gray-800 font-medium select-text">
-                            <FormattedText text={option} />
-                          </div>
-
-                          {/* Instant review indicators */}
-                          {userCheckedCurrent && (
-                            <div className="absolute right-4 top-1/2 -translate-y-1/2 select-none">
-                              {isCorrectAnswer ? (
-                                <CheckCircle className="w-5 h-5 text-green-600" />
-                              ) : (
-                                isSelected && <XCircle className="w-5 h-5 text-red-500" />
-                              )}
-                            </div>
-                          )}
-                        </div>
-                      );
-                    })}
-                  </div>
+                  {/* Code snippet and answer area, per question format */}
+                  <QuestionBody
+                    question={currentQuestion}
+                    presentation={presentationOf(currentQuestion)}
+                    answer={session.userAnswers[currentQuestion.id]}
+                    onAnswer={setCurrentAnswer}
+                    revealed={userCheckedCurrent}
+                    domcOrder={session.domcOrder[currentQuestion.id]}
+                    displayOrder={session.poolOrder[currentQuestion.id]}
+                  />
 
                   {/* Practice Answer validation panel */}
-                  {isPracticeMode && (
+                  {isPracticeMode && session.mode !== "MOCK_EXAM" && (
                     <div className="mt-8 pt-4 border-t border-gray-100 flex flex-col gap-4">
                       
                       {!userCheckedCurrent ? (
                         <div className="flex flex-wrap items-center justify-between gap-3">
                           <button
                             onClick={checkCurrentAnswer}
-                            disabled={!(session.userAnswers[currentQuestion.id] && session.userAnswers[currentQuestion.id].length > 0)}
+                            disabled={!currentIsAnswered}
                             className={`px-6 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all cursor-pointer ${
-                              session.userAnswers[currentQuestion.id] && session.userAnswers[currentQuestion.id].length > 0
+                              currentIsAnswered
                                 ? "bg-gray-900 border border-gray-900 text-white hover:bg-[#FF694B] hover:border-[#FF694B]"
                                 : "bg-gray-100 border border-gray-200 text-gray-400 cursor-not-allowed"
                             }`}
@@ -1570,12 +1475,7 @@ export default function App() {
                   session.questions.forEach((q) => {
                     if (q.category === catName) {
                       total += 1;
-                      const ans = session.userAnswers[q.id] || [];
-                      const corr = q.correctAnswers;
-                      if (
-                        ans.length === corr.length &&
-                        ans.every((v) => corr.includes(v))
-                      ) {
+                      if (isCorrect(q, session.userAnswers[q.id], session.presentations[q.id])) {
                         correct += 1;
                       }
                     }
@@ -1654,7 +1554,7 @@ export default function App() {
               <div className="space-y-4 text-xs text-gray-300 leading-relaxed">
                 <div>
                   <h3 className="font-bold text-white mb-1">Develop Models Checklist:</h3>
-                  <p className="text-gray-400">Review cross-project references. Downstream compile triggers from separated repositories require configured upstream model keys (<code>access: public</code>) paired alongside declared <code>contract: &#123;enforced: true&#125;</code> specifications.</p>
+                  <p className="text-gray-400">Review cross-project references. A downstream project can <code>ref</code> an upstream model only when that model is <code>access: public</code>; an enforced contract is recommended for public models but not required.</p>
                 </div>
                 
                 <div>
@@ -1680,11 +1580,7 @@ export default function App() {
 
             <div className="space-y-6 divide-y divide-gray-100">
               {session.questions.map((q, idx) => {
-                const answers = session.userAnswers[q.id] || [];
-                const correct = q.correctAnswers;
-                const isCorrect =
-                  answers.length === correct.length &&
-                  answers.every((v) => correct.includes(v));
+                const answeredCorrectly = isCorrect(q, session.userAnswers[q.id], session.presentations[q.id]);
 
                 return (
                   <div key={q.id} className={`pt-6 ${idx === 0 ? "pt-0" : ""}`}>
@@ -1693,17 +1589,17 @@ export default function App() {
                     <div className="flex flex-wrap items-center justify-between gap-4 mb-3">
                       <div className="flex items-center gap-2">
                         <span className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold text-white ${
-                          isCorrect ? "bg-green-600" : "bg-red-500"
+                          answeredCorrectly ? "bg-green-600" : "bg-red-500"
                         }`}>
                           {idx + 1}
                         </span>
                         <h4 className="font-bold text-gray-900 text-sm">
-                          Question {idx + 1} ({getCategoryShortTag(q.category)})
+                          Question {idx + 1} ({getCategoryShortTag(q.category)} · {FORMAT_LABELS[session.presentations[q.id] === "domc" ? "domc" : formatOf(q)]})
                         </h4>
                       </div>
 
                       <div className="flex items-center gap-2">
-                        {isCorrect ? (
+                        {answeredCorrectly ? (
                           <span className="px-2.5 py-0.5 bg-green-50 border border-green-200 text-green-700 text-[10px] font-bold rounded flex items-center gap-1">
                             <Check className="w-3 h-3 stroke-[3]" /> Correct
                           </span>
@@ -1720,30 +1616,18 @@ export default function App() {
                       <FormattedText text={q.questionText} />
                     </p>
 
-                    {/* Display alternatives */}
-                    <div className="space-y-1.5 pl-6 mb-4 select-text">
-                      {q.options.map((opt, opIdx) => {
-                        const wasChosen = answers.includes(opIdx);
-                        const pointsCorrect = correct.includes(opIdx);
-
-                        let prefix = "• ";
-                        let styleClass = "text-gray-500 text-xs";
-                        
-                        if (pointsCorrect) {
-                          prefix = "✓ ";
-                          styleClass = "text-green-700 font-bold text-xs";
-                        } else if (wasChosen) {
-                          prefix = "✗ ";
-                          styleClass = "text-red-500 font-bold text-xs";
-                        }
-
-                        return (
-                          <div key={opIdx} className={`${styleClass} select-text`}>
-                            <span className="font-mono mr-1 select-none">{prefix}</span>
-                            <FormattedText text={opt} />
-                          </div>
-                        );
-                      })}
+                    {/* The answer as given, with the correct answer marked */}
+                    <div className="mb-4">
+                      <QuestionBody
+                        question={q}
+                        presentation={session.presentations[q.id] ?? "standard"}
+                        answer={session.userAnswers[q.id]}
+                        onAnswer={() => {}}
+                        revealed
+                        readOnly
+                        domcOrder={session.domcOrder[q.id]}
+                        displayOrder={session.poolOrder[q.id]}
+                      />
                     </div>
 
                     {/* Display analysis block */}

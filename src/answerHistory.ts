@@ -29,13 +29,6 @@ export function saveHistory(history: AnswerHistory): void {
   }
 }
 
-export function isAnswerCorrect(question: Question, answers: number[]): boolean {
-  return (
-    answers.length === question.correctAnswers.length &&
-    answers.every((value) => question.correctAnswers.includes(value))
-  );
-}
-
 export function recordResults(
   history: AnswerHistory,
   results: { questionId: number; correct: boolean }[],
