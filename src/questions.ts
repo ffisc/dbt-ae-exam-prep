@@ -5,13 +5,10 @@ export const examQuestions: Question[] = [
     id: 1,
     category: "Develop Models",
     difficulty: "Advanced",
-    questionText: "An analytics engineer is setting up a dbt Mesh architecture. They want to expose a model named `fct_orders` in an upstream 'core' project so that other down-stream department projects can reference it. What is the minimum configuration required in the upstream project's schema file to allow cross-project dereference with '{{ ref() }}' and ensure that the downstream build does not fail during compilation?",
-    codeSnippet: `models:
-  - name: fct_orders
-    config:
-      # Which setting goes here?
-      access: public`,
-    codeLanguage: "yaml",
+    questionText: "An analytics engineer is setting up a dbt Mesh architecture. A downstream project is attempting to reference `fct_orders` from an upstream 'core_project' as shown in the query below. What is the minimum configuration required in the upstream project's schema file to allow this cross-project reference and ensure downstream compilation succeeds?",
+    codeSnippet: `-- In downstream marketing project (models/marts/fct_marketing.sql)
+select * from {{ ref('core_project', 'fct_orders') }}`,
+    codeLanguage: "sql",
     options: [
       "No configuration is required; any model in a dbt project can be referenced across projects by default if imported as a package.",
       "Set `access: public` in the model's properties. By default, dbt models are `private`.",
@@ -28,19 +25,6 @@ export const examQuestions: Question[] = [
     category: "Develop Models",
     difficulty: "Intermediate",
     questionText: "Which of the following describes the correct syntactical pattern for enforcing a model contract on a PostgreSQL SQL model inside its YAML definition file?",
-    codeSnippet: `models:
-  - name: dim_customers
-    config:
-      contract:
-        enforced: true
-    columns:
-      - name: customer_id
-        data_type: integer
-        constraints:
-          - type: not_null
-      - name: signup_date
-        data_type: date`,
-    codeLanguage: "yaml",
     options: [
       "The contract must be defined with `contract: true` and column details can be completely omitted, letting dbt infer types at runtime.",
       "The contract configuration requires `contract: {enforced: true}` at the model level, and every single column in the model must have a declared `data_type` matching the database schema.",
@@ -48,7 +32,7 @@ export const examQuestions: Question[] = [
       "Contracts are declared inside the `dbt_project.yml` file under `models: contracts: enforced: true` which applies to all models automatically."
     ],
     correctAnswers: [1],
-    explanation: "CORRECT ACTION:\nWhen you enforce a model contract using `contract: {enforced: true}`, dbt verifies that the model's actual query results match the declared columns exactly. Crucially, you must explicitly declare every column in the schema file, and each of those columns must have a `data_type` property configured.\n\nINCORRECT COMPETING OPTIONS:\n- contract: true with omitted columns: Non-compliant configuration. A model contract demands detailed, explicit data-type declarations for columns in schema YAML files and does not permit dynamic runtime type inference.\n- Set access: global and database constraints inside SQL code: Data type contracts must be defined in the schema YAML, and there is no 'access: global' configuration.\n- Declare inside dbt_project.yml globally: Contracts must be enabled and described model-by-model in schema configurations, not globally inside dbt_project.yml.",
+    explanation: "CORRECT ACTION:\nWhen you enforce a model contract using `contract: {enforced: true}`, dbt verifies that the model's actual query results match the declared columns exactly. Crucially, you must explicitly declare every column in the schema file, and each of those columns must have a `data_type` property configured.\n\nINCORRECT COMPETING OPTIONS:\n- contract: true with omitted columns: Non-compliant configuration. A model contract demands detailed, explicit data-type declarations for columns in schema YAML files and does not permit dynamic runtime type inference.\n- Set access: global and database constraints inside SQL code: Data type contracts must be defined in the schema YAML, and there is no 'access: global' configuration.\n- Declare inside `dbt_project.yml` globally: Contracts must be enabled and described model-by-model in schema configurations, not globally inside `dbt_project.yml`.",
     references: "https://docs.getdbt.com/docs/collaborate/govern/model-contracts",
     dbtVersionFocus: "v1.5+ (Model Contracts)"
   },
@@ -57,16 +41,6 @@ export const examQuestions: Question[] = [
     category: "Develop Models",
     difficulty: "Advanced",
     questionText: "An analytics team needs to introduce a breaking schema change to an established model named `dim_users` while keeping the old schema active for old downstream nodes. They decide to use model versioning. They designate file names as `dim_users_v1.sql` and `dim_users_v2.sql`. What is the correct YAML pattern in their model schema definition to complete this version configuration?",
-    codeSnippet: `models:
-  - name: dim_users
-    latest_version: 1
-    versions:
-      - v: 1
-      - v: 2
-        columns:
-          - name: phone_number
-            data_type: varchar`,
-    codeLanguage: "yaml",
     options: [
       "Register a separate model block for each version: one named `dim_users_v1` and one named `dim_users_v2` with direct references.",
       "Register a single model named `dim_users`, specify its `latest_version: 1`, and list its versions in the `versions:` array as sub-key declarations matching the file suffixes.",
@@ -82,19 +56,13 @@ export const examQuestions: Question[] = [
     id: 4,
     category: "Test and Document Models",
     difficulty: "Intermediate",
-    questionText: "In dbt Core v1.8, unit testing was officially introduced to let analytics engineers validate SQL logic with mock data. Which block correctly declares a unit test for a model named `dim_customers` that queries a source named `raw_customers`?",
-    codeSnippet: `unit_tests:
-  - name: test_inactive_customers_are_filtered
-    model: dim_customers
-    given:
-      - input: source('jaffle_shop', 'raw_customers')
-        rows:
-          - {id: 1, status: 'inactive'}
-          - {id: 2, status: 'active'}
-    expect:
-      rows:
-        - {id: 2, status: 'active'}`,
-    codeLanguage: "yaml",
+    questionText: "In dbt Core v1.8+, unit testing allows analytics engineers to validate model SQL logic using static mock data. For the `dim_customers.sql` model shown below, which structure correctly declares this unit test in a schema `.yml` file?",
+    codeSnippet: `-- models/marts/dim_customers.sql
+with customers as (
+    select * from {{ source('jaffle_shop', 'raw_customers') }}
+)
+select * from customers where status = 'active'`,
+    codeLanguage: "sql",
     options: [
       "Declarations must be placed under custom sql files inside the `tests/` directory and must represent a standard SELECT query returning error rows.",
       "The definition must be placed under `unit_tests:` in a `.yml` file. It must reference the target `model`, state the `given` inputs with mock `rows` (using Jinja references to sources/refs), and use the `expect` block to declare expected outputs.",
@@ -110,7 +78,7 @@ export const examQuestions: Question[] = [
     id: 5,
     category: "Develop Models",
     difficulty: "Advanced",
-    questionText: "You are implementing the dbt Semantic Layer. You need to configure a metric that computes the average order value (AOV). Crucially, the metric is calculated as order revenue divided by total orders. What is the correct object setup inside your schema YAML?",
+    questionText: "Based on the semantic model configuration below, you need to configure a metric that computes the average order value (AOV) as total_revenue divided by distinct_orders. What is the correct YAML specification to define this derived metric under `metrics:` in your schema file?",
     codeSnippet: `semantic_models:
   - name: orders
     model: ref('fct_orders')
@@ -118,17 +86,12 @@ export const examQuestions: Question[] = [
       - name: total_revenue
         agg: sum
       - name: distinct_orders
-        agg: count_distinct
-metrics:
-  - name: average_order_value
-    type: expression
-    type_params:
-      expr: total_revenue / distinct_orders`,
+        agg: count_distinct`,
     codeLanguage: "yaml",
     options: [
       "The metric is defined inside the SQL model directly via custom SQL window average queries.",
       "Metrics must be defined under a `semantic_models` parent block as simple SQL fragments inside the main database schema, without individual measure declarations.",
-      "You define measures in the model's `semantic_model` config block, then define a metric of type `expression` under the `metrics:` property. The `expr` parameter uses the measures to calculate the metric.",
+      "Define a metric of type `expression` under the `metrics:` property, with `type_params: { expr: total_revenue / distinct_orders }` referencing the defined measures.",
       "Define type `calculation` directly inside standard dbt generic testing blocks, which aggregates and outputs average tables dynamically."
     ],
     correctAnswers: [2],
@@ -140,17 +103,15 @@ metrics:
     id: 6,
     category: "Deploy dbt Projects",
     difficulty: "Advanced",
-    questionText: "An organization is deploying a Slim CI pipeline to prevent redundant warehouse runs. The pipeline compiles and runs only models that have changed. They also want downstream nodes that haven't changed to fetch state from the latest production run dynamically. What is the correct CLI invocation and environment configuration to accomplish this Slim CI run?",
-    codeSnippet: `dbt build --select state:modified+ --defer --state path/to/prod/manifest`,
-    codeLanguage: "bash",
+    questionText: "An organization is deploying a Slim CI pipeline to prevent redundant warehouse runs. The pipeline compiles and runs only models that have changed and their downstream dependents. They also want downstream nodes that haven't changed to fetch state from the latest production run dynamically. What is the correct CLI invocation and environment configuration to accomplish this Slim CI run?",
     options: [
-      "dbt run --select state:new+ --state prod --defer-all-models",
-      "dbt build --select state:modified+ --defer --state path/to/prod/artifacts",
-      "dbt test --select modified+ --from-manifest production.json",
+      "dbt run `--select` state:new+ `--state` prod `--defer`-all-models",
+      "dbt build `--select` state:modified+ `--defer` `--state` path/to/prod/artifacts",
+      "dbt test `--select` modified+ --from-manifest production.json",
       "No CLI command exists. dbt Cloud manages this automatically without allowing CLI config modifications."
     ],
     correctAnswers: [1],
-    explanation: "CORRECT ACTION:\nSlim CI builds compile only modified nodes (`--select state:modified+`) alongside their downstream dependents (the `+` suffix). Using `--defer` redirects any unmodified upstream nodes to fetch data from the production environment, specified by pointing `--state` to a directory containing the production run's `manifest.json`.\n\nINCORRECT COMPETING OPTIONS:\n- state:new+: Incorrect selector syntaxes. The standard selector for altered projects is 'state:modified_plus' or 'state:modified+'.\n- test --select modified+: Runs tests without executing model builds first. It also uses incorrect '--from-manifest' keywords.\n- No CLI command exists / managed automatically: Fully incorrect; dbt Core's CLI is highly configurable, offering complete manual controls over deferrals.",
+    explanation: "CORRECT ACTION:\nSlim CI builds compile only modified nodes (`--select state:modified+`) alongside their downstream dependents (the `+` suffix). Using `--defer` redirects any unmodified upstream nodes to fetch data from the production environment, specified by pointing `--state` to a directory containing the production run's `manifest.json`.\n\nINCORRECT COMPETING OPTIONS:\n- state:new+: Incorrect selector syntaxes. The standard selector for altered projects is 'state:modified_plus' or 'state:modified+'.\n- test `--select` modified+: Runs tests without executing model builds first. It also uses incorrect '--from-manifest' keywords.\n- No CLI command exists / managed automatically: Fully incorrect; dbt Core's CLI is highly configurable, offering complete manual controls over deferrals.",
     references: "https://docs.getdbt.com/docs/deploy/slim-ci",
     dbtVersionFocus: "Core (All versions, updated in 1.7)"
   },
@@ -171,12 +132,12 @@ select * from {{ ref('stg_payments') }}`,
     codeLanguage: "sql",
     options: [
       "The developer must still write a manual 'is_incremental()' filter block inside their SQL model; otherwise, dbt performs a full table scan for every batch execution.",
-      "dbt automatically injects temporal filtering where-clauses for the 'event_time' column based on the active batch boundaries and lookback. Developers do not write manual Jinja is_incremental() blocks in their SQL code.",
+      "dbt automatically injects temporal filtering where-clauses for the 'event_time' column based on the active batch boundaries and lookback. Developers do not write manual Jinja `is_incremental()` blocks in their SQL code.",
       "The 'microbatch' strategy is only supported for ephemeral views and does not execute in serial database transactions.",
       "Configuring 'microbatch' requires defining separate schema contracts for each daily and hourly target partition."
     ],
     correctAnswers: [1],
-    explanation: "CORRECT ACTION:\nUnder the dbt Core v1.11 microbatch incremental strategy, dbt automatically handles the temporal logic. It injects dynamic WHERE clauses on the 'event_time' column (e.g. payment_date) using the active batch window and lookback parameter, meaning developers compile clean, standard SELECT queries without needing manual is_incremental() Jinja blocks or date calculation filters.\n\nINCORRECT COMPETING OPTIONS:\n- Needs manual is_incremental() filter blocks: One of the signature benefits of microbatch is eliminating manually written query date filters.\n- Only supported for ephemeral views: Ephemeral structures do not persist data inside database engines and therefore cannot be materialized incrementally.\n- Requires separate schema contracts per partition: Partitions are managed purely inline during runtime execution, requiring no extra YAML schemas.",
+    explanation: "CORRECT ACTION:\nUnder the dbt Core v1.11 microbatch incremental strategy, dbt automatically handles the temporal logic. It injects dynamic WHERE clauses on the 'event_time' column (e.g. payment_date) using the active batch window and lookback parameter, meaning developers compile clean, standard SELECT queries without needing manual `is_incremental()` Jinja blocks or date calculation filters.\n\nINCORRECT COMPETING OPTIONS:\n- Needs manual `is_incremental()` filter blocks: One of the signature benefits of microbatch is eliminating manually written query date filters.\n- Only supported for ephemeral views: Ephemeral structures do not persist data inside database engines and therefore cannot be materialized incrementally.\n- Requires separate schema contracts per partition: Partitions are managed purely inline during runtime execution, requiring no extra YAML schemas.",
     references: "https://docs.getdbt.com/docs/build/incremental-strategy#microbatch",
     dbtVersionFocus: "v1.11+ (Microbatch Incremental Strategy)"
   },
@@ -198,7 +159,7 @@ models:
       "Cross-project refs can only operate on incremental models; ephemeral or table views are disallowed."
     ],
     correctAnswers: [1],
-    explanation: "CORRECT ACTION:\nIn dbt Mesh, models possess a default access tier of `private`. `private` models can only be referenced inside the project where they are declared. `protected` models can only be referenced by models in the same package (or project groups). Setting `access: public` is a hard requirement to authorize cross-project calling.\n\nINCORRECT COMPETING OPTIONS:\n- Missing package declaration in packages.yml: packages.yml downloads raw source code libraries locally, whereas dbt Mesh relies on manifest declarations and compiled metadata.\n- Upstream core project using dbt v1.0: Inapplicable; packages has been natively supported in dbt since early beta variations.\n- Mesh restricted to incremental materializations: ephemerals, views, and tables are all valid provided proper contracts reside on top of them.",
+    explanation: "CORRECT ACTION:\nIn dbt Mesh, models possess a default access tier of `private`. `private` models can only be referenced inside the project where they are declared. `protected` models can only be referenced by models in the same package (or project groups). Setting `access: public` is a hard requirement to authorize cross-project calling.\n\nINCORRECT COMPETING OPTIONS:\n- Missing package declaration in `packages.yml`: `packages.yml` downloads raw source code libraries locally, whereas dbt Mesh relies on manifest declarations and compiled metadata.\n- Upstream core project using dbt v1.0: Inapplicable; packages has been natively supported in dbt since early beta variations.\n- Mesh restricted to incremental materializations: ephemerals, views, and tables are all valid provided proper contracts reside on top of them.",
     references: "https://docs.getdbt.com/docs/collaborate/governance/model-access",
     dbtVersionFocus: "v1.7+ (dbt Mesh)"
   },
@@ -237,11 +198,11 @@ Relation "analytics.dim_products" already exists as view; cannot create TABLE.`,
     options: [
       "Place logic inside `dbt_project.yml` matching environments directly.",
       "Write a custom macro with name `generate_schema_name` in your macro directory, checking `target.name` (or `target.profile_name`). If target.name equates to 'prod', return the clean `custom_schema_name`, otherwise return `target.schema`.",
-      "dbt does not support dynamic schema overrides outside target configurations inside profiles.yml.",
+      "dbt does not support dynamic schema overrides outside target configurations inside `profiles.yml`.",
       "Remove the macro and configure database names directly in the model's metadata block."
     ],
     correctAnswers: [1],
-    explanation: "CORRECT ACTION:\nStandard dynamic schema patterns in dbt involve customizing the default `generate_schema_name` macro. In the overridden code, inspecting the active `target.name` decides whether code goes to actual custom destination names (production targets) or fallbacks safely to individual development schemes (e.g. `dbt_jsmith`).\n\nINCORRECT COMPETING OPTIONS:\n- Place logic inside dbt_project.yml directly: Schema dynamic concatenation overrides require active Jinja logic and cannot be parsed from basic flat key files.\n- dbt does not support dynamic schema overrides: Incorrect, customizing the default dynamic schema macro is fully supported and recommended.\n- Remove the macro and write in metadata blocks: dbt ignores model config metadata fields if they collide with primary schema generation macros.",
+    explanation: "CORRECT ACTION:\nStandard dynamic schema patterns in dbt involve customizing the default `generate_schema_name` macro. In the overridden code, inspecting the active `target.name` decides whether code goes to actual custom destination names (production targets) or fallbacks safely to individual development schemes (e.g. `dbt_jsmith`).\n\nINCORRECT COMPETING OPTIONS:\n- Place logic inside `dbt_project.yml` directly: Schema dynamic concatenation overrides require active Jinja logic and cannot be parsed from basic flat key files.\n- dbt does not support dynamic schema overrides: Incorrect, customizing the default dynamic schema macro is fully supported and recommended.\n- Remove the macro and write in metadata blocks: dbt ignores model config metadata fields if they collide with primary schema generation macros.",
     references: "https://docs.getdbt.com/docs/build/custom-schemas",
     dbtVersionFocus: "Core"
   },
@@ -250,16 +211,14 @@ Relation "analytics.dim_products" already exists as view; cannot create TABLE.`,
     category: "Test and Document Models",
     difficulty: "Intermediate",
     questionText: "An analytics engineer has set up both generic column tests and the new dbt v1.8 unit tests on their models. They want to execute ONLY the unit tests across their entire project to keep build cycles rapid during development. Which command correctly performs this filtered execution?",
-    codeSnippet: `dbt test --select "test_type:unit"`,
-    codeLanguage: "bash",
     options: [
       "dbt run --unit-only",
-      "dbt test --select \"test_type:generic\"",
-      "dbt test --select \"test_type:unit\"",
+      "dbt test `--select` \"test_type:generic\"",
+      "dbt test `--select` \"test_type:unit\"",
       "dbt test --exclude column_tests"
     ],
     correctAnswers: [2],
-    explanation: "CORRECT ACTION:\nIn dbt Core v1.8+, you can select tests by their test type. Unit tests are targeted specifically by executing the dbt select criteria: `test_type:unit`. Generic tests (such as unique, non_null, relationships, accepted_values) can be selected via `test_type:generic`.\n\nINCORRECT COMPETING OPTIONS:\n- dbt run --unit-only: Unrecognized modifier; dbt run compiles models, not tests.\n- dbt test --select test_type:generic: Runs only standard schema validation tests, explicitly omitting unit tests.\n- dbt test --exclude column_tests: Erroneous syntax; column-level schema asserts are identified as generic tests, not exclusive categories.",
+    explanation: "CORRECT ACTION:\nIn dbt Core v1.8+, you can select tests by their test type. Unit tests are targeted specifically by executing the dbt select criteria: `test_type:unit`. Generic tests (such as unique, non_null, relationships, accepted_values) can be selected via `test_type:generic`.\n\nINCORRECT COMPETING OPTIONS:\n- `dbt run` --unit-only: Unrecognized modifier; `dbt run` compiles models, not tests.\n- `dbt test` `--select` test_type:generic: Runs only standard schema validation tests, explicitly omitting unit tests.\n- `dbt test` --exclude column_tests: Erroneous syntax; column-level schema asserts are identified as generic tests, not exclusive categories.",
     references: "https://docs.getdbt.com/docs/build/unit-tests#running-unit-tests",
     dbtVersionFocus: "v1.8+ (Unit Testing)"
   },
@@ -271,13 +230,13 @@ Relation "analytics.dim_products" already exists as view; cannot create TABLE.`,
     codeSnippet: `dbt build --select my_microbatch_model ... (What flags go here?)`,
     codeLanguage: "bash",
     options: [
-      "Define standard filters inside packages.yml and trigger a full project-wide re-compilation with 'dbt deps'.",
+      "Define standard filters inside `packages.yml` and trigger a full project-wide re-compilation with 'dbt deps'.",
       "Pass the date range using the CLI configurations '--event-time-start 2026-05-10' and '--event-time-end 2026-05-15'. dbt will process and run independent transactions for only the batch periods that fall in this interval.",
       "Set 'deprecated_at: 2026-05-10' in the model schema YAML and run with standard 'dbt run --full-refresh'.",
       "Configure variables via '--vars' to override the internal connection pool variables '_dbt_max_event_time' in the database drivers."
     ],
     correctAnswers: [1],
-    explanation: "CORRECT ACTION:\nUnder dbt Core v1.11, the microbatch strategy supports precise execution control using the '--event-time-start' and '--event-time-end' CLI configurations. This enables developers to execute backfills or targeted partition runs, forcing the microbatch scheduler to compile and serialise execution exclusively for the batches inside the declared time bounds, which dramatically reduces data scans.\n\nINCORRECT COMPETING OPTIONS:\n- Define filters in packages.yml: Packages.yml manages external software package sources, not date filters.\n- Set deprecated_at and run full-refresh: Deprecating model versions marks old builds as deprecated but cannot guide incremental date ranges.\n- Set vars to override max_event_time: dbt microbatch scheduling is built into the engine directly and is not driven by custom connection pool variables.",
+    explanation: "CORRECT ACTION:\nUnder dbt Core v1.11, the microbatch strategy supports precise execution control using the '--event-time-start' and '--event-time-end' CLI configurations. This enables developers to execute backfills or targeted partition runs, forcing the microbatch scheduler to compile and serialise execution exclusively for the batches inside the declared time bounds, which dramatically reduces data scans.\n\nINCORRECT COMPETING OPTIONS:\n- Define filters in `packages.yml`: Packages.yml manages external software package sources, not date filters.\n- Set deprecated_at and run full-refresh: Deprecating model versions marks old builds as deprecated but cannot guide incremental date ranges.\n- Set vars to override max_event_time: dbt microbatch scheduling is built into the engine directly and is not driven by custom connection pool variables.",
     references: "https://docs.getdbt.com/docs/build/incremental-strategy#microbatch",
     dbtVersionFocus: "v1.11+ (Microbatch Incremental Strategy)"
   },
@@ -368,7 +327,7 @@ dbt run --vars '{"source_database": "raw_sales_dev"}'`,
       "Both are merged, generating database-specific exceptions at run execution."
     ],
     correctAnswers: [2],
-    explanation: "CORRECT ACTION:\ndbt establishes a strict order of variable priority. Values supplied on the command-line utilizing the `--vars` argument override any equivalent variables declared inside the `dbt_project.yml` files, profiles, or macro fallbacks.\n\nINCORRECT COMPETING OPTIONS:\n- dbt throws a compilation error: It is completely valid to pass identical vars on CLI; dbt manages this via sequential overriding rather than crashing.\n- The value inside dbt_project.yml overrides CLI: Totally incorrect because local configurations are designed as defaults to be overwritten by production schedules or developers via CLI flags.\n- Both are merged: No merging of duplicate keys takes place; the CLI value completely replaces the local value in namespace checks.",
+    explanation: "CORRECT ACTION:\ndbt establishes a strict order of variable priority. Values supplied on the command-line utilizing the `--vars` argument override any equivalent variables declared inside the `dbt_project.yml` files, profiles, or macro fallbacks.\n\nINCORRECT COMPETING OPTIONS:\n- dbt throws a compilation error: It is completely valid to pass identical vars on CLI; dbt manages this via sequential overriding rather than crashing.\n- The value inside `dbt_project.yml` overrides CLI: Totally incorrect because local configurations are designed as defaults to be overwritten by production schedules or developers via CLI flags.\n- Both are merged: No merging of duplicate keys takes place; the CLI value completely replaces the local value in namespace checks.",
     references: "https://docs.getdbt.com/docs/build/project-variables",
     dbtVersionFocus: "Core"
   },
@@ -390,7 +349,7 @@ dbt run --vars '{"source_database": "raw_sales_dev"}'`,
       "Even sibling models inside the finance folder are restricted if they don't have separate contracts enforced."
     ],
     correctAnswers: [1],
-    explanation: "CORRECT ACTION:\nModels marked with `access: private` can only be referenced by other models defined inside the exact same dbt project. If the model is also assigned a `group`, standard dbt model access constraints dictate that only other models belonging to that identical group can compile references to it, securing private data fields.\n\nINCORRECT COMPETING OPTIONS:\n- Any model in entire project can reference it: Fails because 'access: private' restricted with 'group: internal_finance' means sibling models in other groups of the same project will violate access constraints.\n- Downstream dbt Mesh projects can reference it: dbt Mesh models must have `access: public` configured to enable cross-project referencing.\n- Restricted even to identical group unless contract enforced: Group permissions act as the primary logical gate; contracts ensure type-safety but don't govern internal grouping access.",
+    explanation: "CORRECT ACTION:\nModels marked with `access: private` can only be referenced by other models defined inside the exact same dbt project. If the model is also assigned a `group`, standard dbt model access constraints dictate that only other models belonging to that identical group can compile references to it, securing private data fields.\n\nINCORRECT COMPETING OPTIONS:\n- Any model in entire project can reference it: Fails because `access: private` restricted with 'group: internal_finance' means sibling models in other groups of the same project will violate access constraints.\n- Downstream dbt Mesh projects can reference it: dbt Mesh models must have `access: public` configured to enable cross-project referencing.\n- Restricted even to identical group unless contract enforced: Group permissions act as the primary logical gate; contracts ensure type-safety but don't govern internal grouping access.",
     references: "https://docs.getdbt.com/docs/collaborate/governance/model-access",
     dbtVersionFocus: "v1.7+ (dbt Mesh & Groups)"
   },
@@ -398,7 +357,7 @@ dbt run --vars '{"source_database": "raw_sales_dev"}'`,
     id: 18,
     category: "Test and Document Models",
     difficulty: "Associate",
-    questionText: "What is the key difference between generic tests and singular tests in dbt test suites?",
+    questionText: "What is the key difference between generic tests and singular tests in `dbt test` suites?",
     codeSnippet: "",
     options: [
       "Generic tests are defined inside SQL files under `tests/generic/`, while singular tests can only be run in dbt Cloud.",
@@ -434,12 +393,12 @@ select * from {{ ref('raw_source') }}`,
     id: 20,
     category: "Deploy dbt Projects",
     difficulty: "Associate",
-    questionText: "You are setting up a dbt run inside standard scheduling software. You want your jobs to fetch external packages from Git registries, delete older local database compiling artifacts, and immediately build your downstream models. Which sequence of dbt commands is correct?",
+    questionText: "You are setting up a `dbt run` inside standard scheduling software. You want your jobs to fetch external packages from Git registries, delete older local database compiling artifacts, and immediately build your downstream models. Which sequence of dbt commands is correct?",
     codeSnippet: "",
     options: [
-      "dbt run -> dbt test -> dbt docs",
-      "dbt clean -> dbt deps -> dbt build",
-      "dbt deps -> dbt clean -> dbt seed",
+      "dbt run -> `dbt test` -> dbt docs",
+      "dbt clean -> `dbt deps` -> dbt build",
+      "dbt deps -> `dbt clean` -> dbt seed",
       "dbt build --with-packages"
     ],
     correctAnswers: [1],
@@ -508,13 +467,13 @@ dependencies:
   - project: core_finance`,
     codeLanguage: "yaml",
     options: [
-      "Specify the upstream project under the 'dependencies:' key within 'dbt_project.yml' (and load the remote manifest via dbt Cloud). This permits referencing public upstream models via 'ref('core_finance', 'fct_revenues')' without local code cloning.",
-      "Add the upstream project name to the local 'packages.yml' file, forcing dbt to download and compile all upstream models as local nodes.",
+      "Specify the upstream project under the `dependencies:` key within `dbt_project.yml` (and load the remote manifest via dbt Cloud). This permits referencing public upstream models via `ref('core_finance', 'fct_revenues')` without local code cloning.",
+      "Add the upstream project name to the local `packages.yml` file, forcing dbt to download and compile all upstream models as local nodes.",
       "Define custom database views manually in the downstream target database and reference them strictly as raw sources.",
-      "Declare a global variable 'upstream_models' pointing to public schemas in profiles.yml."
+      "Declare a global variable 'upstream_models' pointing to public schemas in `profiles.yml`."
     ],
     correctAnswers: [0],
-    explanation: "CORRECT ACTION:\nIn dbt Mesh, instead of treating an external project as an imported package (which compiles all upstream files locally), we define cross-project dependencies in the `dbt_project.yml` under `dependencies:`. Downstream models reference public models from that project seamlessly (e.g. `ref('project_name', 'model_name')`). To resolve compilation metadata without reading the raw code, dbt fetches the upstream manifest dynamically.\n\nINCORRECT COMPETING OPTIONS:\n- Add project to packages.yml: Downloading local copies is packages behavior; it compiles duplicate items locally which goes against Mesh architecture.\n- Define views manually in target warehouse: Restricts compiler power and loses deep validation DAG linkages.\n- Declare variables in profiles.yml: Profiles files establish connectivity credentials, not schema and compiler model mappings.",
+    explanation: "CORRECT ACTION:\nIn dbt Mesh, instead of treating an external project as an imported package (which compiles all upstream files locally), we define cross-project dependencies in the `dbt_project.yml` under `dependencies:`. Downstream models reference public models from that project seamlessly (e.g. `ref('project_name', 'model_name')`). To resolve compilation metadata without reading the raw code, dbt fetches the upstream manifest dynamically.\n\nINCORRECT COMPETING OPTIONS:\n- Add project to `packages.yml`: Downloading local copies is packages behavior; it compiles duplicate items locally which goes against Mesh architecture.\n- Define views manually in target warehouse: Restricts compiler power and loses deep validation DAG linkages.\n- Declare variables in `profiles.yml`: Profiles files establish connectivity credentials, not schema and compiler model mappings.",
     references: "https://docs.getdbt.com/docs/collaborator/mesh/cross-project-ref",
     dbtVersionFocus: "v1.10+ (dbt Mesh Dependencies)"
   },
@@ -522,12 +481,10 @@ dependencies:
     id: 24,
     category: "Deploy dbt Projects",
     difficulty: "Advanced",
-    questionText: "An analytics engineer is deploying models in an isolated Dev warehouse environment. They want to compile only their modified models while using dbt's model deferral feature. When deferral is active ('--defer --state state_dir'), how does dbt handle references to unmodified upstream models during compilation?",
-    codeSnippet: `dbt build --select state:modified+ --defer --state path/to/prod/manifest`,
-    codeLanguage: "bash",
+    questionText: "An analytics engineer is deploying models in an isolated Dev warehouse environment. They want to compile only their modified models while using dbt's model deferral feature. When deferral is active ('--defer `--state` state_dir'), how does dbt handle references to unmodified upstream models during compilation?",
     options: [
       "It compiles references using the user's Dev database schema prefix, but returns mock empty datasets.",
-      "It redirects references to the production database and schema specified in the state's 'manifest.json' file, avoiding duplicating build runs in the Developer's isolated target.",
+      "It redirects references to the production database and schema specified in the state's `manifest.json` file, avoiding duplicating build runs in the Developer's isolated target.",
       "It compiles upstream dependencies as dynamic in-line CTEs directly into the developer's downstream query.",
       "It halts execution with database privilege mismatch exceptions if the prod schema is read-only."
     ],
@@ -550,13 +507,13 @@ dependencies:
           - {event_id: 100, processed_at: '2026-05-15'}`,
     codeLanguage: "yaml",
     options: [
-      "Configure a separate model named 'my_incremental_model_mock.sql' in the tests directory.",
+      "Configure a separate model named `my_incremental_model_mock.sql` in the tests directory.",
       "Specify 'input: this' (or the self-referencing model's name) inside the 'given:' array block and provide mock rows representing the existing database records.",
       "Unit tests cannot mock self-references; these tests must be run targeting live warehouse schemas.",
-      "Inject SQL CTEs using custom override parameters in 'dbt_project.yml'."
+      "Inject SQL CTEs using custom override parameters in `dbt_project.yml`."
     ],
     correctAnswers: [1],
-    explanation: "CORRECT ACTION:\nTo test self-referencing SQL logic (such as models matching against `{{ this }}`), dbt Core unit testing permits specifying `this` as an input within the `given` array block. Developers define a mock set of rows representing the existing data in the target table, allowing compilation of logic like date calculation limits over historical rows.\n\nINCORRECT COMPETING OPTIONS:\n- Separate mock SQL model in tests/: Standalone files cannot easily model recursive dbt logic without complex setup, whereas `given: - input: this` makes it incredibly elegant.\n- Unit tests cannot mock self-references: Incorrect. dbt has made extensive updates to support `this` as a mock input explicitly.\n- Inject SQL CTEs inside dbt_project.yml: General project level YAML files are invalid spaces to inject temporary SQL CTE code blocks.",
+    explanation: "CORRECT ACTION:\nTo test self-referencing SQL logic (such as models matching against `{{ this }}`), dbt Core unit testing permits specifying `this` as an input within the `given` array block. Developers define a mock set of rows representing the existing data in the target table, allowing compilation of logic like date calculation limits over historical rows.\n\nINCORRECT COMPETING OPTIONS:\n- Separate mock SQL model in tests/: Standalone files cannot easily model recursive dbt logic without complex setup, whereas `given: - input: this` makes it incredibly elegant.\n- Unit tests cannot mock self-references: Incorrect. dbt has made extensive updates to support `this` as a mock input explicitly.\n- Inject SQL CTEs inside `dbt_project.yml`: General project level YAML files are invalid spaces to inject temporary SQL CTE code blocks.",
     references: "https://docs.getdbt.com/docs/build/unit-tests#mocking-this",
     dbtVersionFocus: "v1.8+ (Unit Testing self-references)"
   },
@@ -564,7 +521,7 @@ dependencies:
     id: 26,
     category: "Develop Models",
     difficulty: "Intermediate",
-    questionText: "An analytics engineer is configuring a dbt snapshot to track slow-changing dimensions (SCD Type 2) on an orders table. When using the `timestamp` strategy, what does dbt expect as the minimum model properties, and what are the generated columns added by dbt in the snapshot target table?",
+    questionText: "An analytics engineer is configuring a `dbt snapshot` to track slow-changing dimensions (SCD Type 2) on an orders table. When using the `timestamp` strategy, what does dbt expect as the minimum model properties, and what are the generated columns added by dbt in the snapshot target table?",
     options: [
       "Requires specifying a `unique_key` and `updated_at`. The snapshot table will contain the custom model columns along with the metadata columns `dbt_valid_from`, `dbt_valid_to`, `dbt_updated_at`, and `dbt_scanned_at`.",
       "Requires writing custom UPDATE triggers at the database layer. No additional tracking columns are appended.",
@@ -572,7 +529,7 @@ dependencies:
       "Requires `check_cols` specifying all values to track. dbt adds `dbt_inserted_at` and `dbt_deleted_at`."
     ],
     correctAnswers: [0],
-    explanation: "CORRECT ACTION:\nUnder the snapshot `timestamp` strategy, dbt requires `unique_key` to identify records and `updated_at` to detect when they have changed. dbt creates and maintains Type II slowly changing dimension tables by appending system-level tracking columns: `dbt_valid_from` (start timestamp), `dbt_valid_to` (end timestamp, null for current), `dbt_updated_at`, and `dbt_scanned_at`.\n\nINCORRECT COMPETING OPTIONS:\n- Custom database triggers required: Incorrect; dbt manages snapshot rows purely inside its analytical execution layer and does not utilize native database trigger files.\n- Adds dbt_is_active boolean: dbt utilizes start/end time markers (`dbt_valid_from`/`dbt_valid_to`) rather than boolean flags to track timelines in SCD Type II tables.\n- Requires check_cols and adds inserted_at/deleted_at: `check_cols` is used in the `check` strategy rather than `timestamp` strategy, and dbt append schema columns are standardized to `dbt_valid_from`/`dbt_valid_to`.",
+    explanation: "CORRECT ACTION:\nUnder the snapshot `timestamp` strategy, dbt requires `unique_key` to identify records and `updated_at` to detect when they have changed. dbt creates and maintains Type II slowly changing dimension tables by appending system-level tracking columns: `dbt_valid_from` (start timestamp), `dbt_valid_to` (end timestamp, null for current), `dbt_updated_at`, and `dbt_scanned_at`.\n\nINCORRECT COMPETING OPTIONS:\n- Custom database triggers required: Incorrect; dbt manages snapshot rows purely inside its analytical execution layer and does not utilize native database trigger files.\n- Adds dbt_is_active boolean: dbt utilizes start/end time markers (`dbt_valid_from`/`dbt_valid_to`) rather than boolean flags to track timelines in SCD Type II tables.\n- Requires `check_cols` and adds inserted_at/deleted_at: `check_cols` is used in the `check` strategy rather than `timestamp` strategy, and dbt append schema columns are standardized to `dbt_valid_from`/`dbt_valid_to`.",
     references: "https://docs.getdbt.com/docs/build/snapshots",
     dbtVersionFocus: "Core"
   },
@@ -598,13 +555,13 @@ dependencies:
     difficulty: "Intermediate",
     questionText: "A dbt project needs to write tables to isolated warehouse databases based on the active target environment. By default, dbt appends a suffix, but the developer wants to override this behavior using the dynamic macro `generate_database_name`. What is the correct pattern to ensure custom databases are respected without standard suffix concatenation?",
     options: [
-      "Pass a parameter in 'dbt_project.yml' reading: 'override_database: true'.",
+      "Pass a parameter in `dbt_project.yml` reading: `override_database: true`.",
       "Write a custom macro in the project named `generate_database_name(custom_database_name, node)`. Inside this macro, check the value of `custom_database_name` and the current `target.name`. If a custom database is defined, return it directly instead of appending the default target suffix.",
-      "Database overrides must be defined by modifying the system drivers inside the container's '/root/.dbt/profiles.yml'.",
+      "Database overrides must be defined by modifying the system drivers inside the container's `/root/.dbt/profiles.yml`.",
       "Use the 'generate_schema_name' macro to dynamically override both schemas and databases in a single string returned to the engine."
     ],
     correctAnswers: [1],
-    explanation: "CORRECT ACTION:\nBy default, dbt concatenates the target database name to custom configurations. To override this behavior, developers replace the default macro by authoring a custom macro named `generate_database_name(custom_database_name, node)`. If target rules match or `custom_database_name` is present, it returns the customized database name directly, skipping standard suffixing.\n\nINCORRECT COMPETING OPTIONS:\n- Pass override_database inside dbt_project.yml: Invalid configuration key; database resolution is managed by profiles and dynamic engine macros.\n- Modify container profiles.yml directly: Modifying global user profiles directly prevents dynamic, programmatic, environment-based naming overrides inside model code.\n- Return combined databases from generate_schema_name: The schema generation macro lacks permission to override catalog database descriptors directly.",
+    explanation: "CORRECT ACTION:\nBy default, dbt concatenates the target database name to custom configurations. To override this behavior, developers replace the default macro by authoring a custom macro named `generate_database_name(custom_database_name, node)`. If target rules match or `custom_database_name` is present, it returns the customized database name directly, skipping standard suffixing.\n\nINCORRECT COMPETING OPTIONS:\n- Pass override_database inside `dbt_project.yml`: Invalid configuration key; database resolution is managed by profiles and dynamic engine macros.\n- Modify container `profiles.yml` directly: Modifying global user profiles directly prevents dynamic, programmatic, environment-based naming overrides inside model code.\n- Return combined databases from `generate_schema_name`: The schema generation macro lacks permission to override catalog database descriptors directly.",
     references: "https://docs.getdbt.com/docs/build/custom-databases",
     dbtVersionFocus: "Core"
   },
@@ -614,13 +571,13 @@ dependencies:
     difficulty: "Intermediate",
     questionText: "An analytics developer runs 'dbt source freshness' and gets an active failure because the raw source table freshness check crossed the error threshold. However, they verify that fresh data was loaded 10 minutes ago. What is the most likely root cause of this mismatch?",
     options: [
-      "The developer specified a static timezone in profiles.yml that mismatched the local system clock.",
+      "The developer specified a static timezone in `profiles.yml` that mismatched the local system clock.",
       "The source configuration in YAML either specified an incorrect `loaded_at_field` column name (so dbt checked system update times, or used the wrong date column), or the database system clock has a synchronization/timezone deviation when compared against the current date evaluated by dbt.",
       "Sources do not support timestamp filtering and must rely on standard sequential primary keys.",
       "The database driver was configured with `enforce_contract: true` causing source validation checks to fail."
     ],
     correctAnswers: [1],
-    explanation: "CORRECT ACTION:\nSource freshness measures the difference between of the maximum value of the designated `loaded_at_field` column and the clock of the machine executing dbt. If `loaded_at_field` points to a column that isn't updated (e.g., user_birthdate instead of record_inserted_at) or if timezone mismatches (UTC vs local) exist between the warehouse timestamps and the execution agent environment, dbt records false freshness errors.\n\nINCORRECT COMPETING OPTIONS:\n- System timezone in profiles.yml mismatch: Connection profiles do not support static timezone constraints as separate settings affecting freshness math.\n- Sources do not support timestamp filtering: Sources do natively support timestamp tracking using `loaded_at_field` properties.\n- Driver configured with enforce_contract: Datastore contracts are for verifying model schemas, not checking feed pipeline ingestion intervals.",
+    explanation: "CORRECT ACTION:\nSource freshness measures the difference between of the maximum value of the designated `loaded_at_field` column and the clock of the machine executing dbt. If `loaded_at_field` points to a column that isn't updated (e.g., user_birthdate instead of record_inserted_at) or if timezone mismatches (UTC vs local) exist between the warehouse timestamps and the execution agent environment, dbt records false freshness errors.\n\nINCORRECT COMPETING OPTIONS:\n- System timezone in `profiles.yml` mismatch: Connection profiles do not support static timezone constraints as separate settings affecting freshness math.\n- Sources do not support timestamp filtering: Sources do natively support timestamp tracking using `loaded_at_field` properties.\n- Driver configured with enforce_contract: Datastore contracts are for verifying model schemas, not checking feed pipeline ingestion intervals.",
     references: "https://docs.getdbt.com/docs/build/sources#source-freshness",
     dbtVersionFocus: "Core"
   },
@@ -630,13 +587,13 @@ dependencies:
     difficulty: "Advanced",
     questionText: "You want to create a custom generic test named `is_even` to assert that all column values in a database are divisible by 2. How should you structure this test inside your project?",
     options: [
-      "Create a custom SQL test inside the `tests/` directory named 'dim_customers_is_even.sql' referencing specific column nodes.",
+      "Create a custom SQL test inside the `tests/` directory named `dim_customers_is_even.sql` referencing specific column nodes.",
       "Create a macro file inside `macros/` (e.g., `is_even.sql`) defining a macro named `test_is_even(model, column_name)`. The macro must construct a SQL SELECT statement that returns rows where the modulo calculation evaluates to a non-zero value.",
-      "Configure a custom generic test inside standard 'dbt_project.yml' using JSON schemas.",
+      "Configure a custom generic test inside standard `dbt_project.yml` using JSON schemas.",
       "Generic tests cannot be customized; you must use third-party plugins or singular tests exclusively."
     ],
     correctAnswers: [1],
-    explanation: "CORRECT ACTION:\nIn dbt, a custom generic test is declared as a reusable macro prefixed with `test_` (like `test_is_even`). It accepts parameters `model` and `column_name`. The compiled SELECT query must target the test rows that violate the constraint: returning any non-even rows. If any row is returned by the compiled query, the test fails during `dbt test`.\n\nINCORRECT COMPETING OPTIONS:\n- Custom sql test inside tests/ name dim_customers_is_even.sql: Standalone sql files represent singular tests which apply to specific tables/columns and are not reusable across other models.\n- Configure JSON schemas in dbt_project.yml: Unrecognized pattern; generic validation logic must be written as macros.\n- Generic tests cannot be customized: Generic tests are highly customizable and can be introduced via custom macros perfectly.",
+    explanation: "CORRECT ACTION:\nIn dbt, a custom generic test is declared as a reusable macro prefixed with `test_` (like `test_is_even`). It accepts parameters `model` and `column_name`. The compiled SELECT query must target the test rows that violate the constraint: returning any non-even rows. If any row is returned by the compiled query, the test fails during `dbt test`.\n\nINCORRECT COMPETING OPTIONS:\n- Custom sql test inside tests/ name dim_customers_is_even.sql: Standalone sql files represent singular tests which apply to specific tables/columns and are not reusable across other models.\n- Configure JSON schemas in `dbt_project.yml`: Unrecognized pattern; generic validation logic must be written as macros.\n- Generic tests cannot be customized: Generic tests are highly customizable and can be introduced via custom macros perfectly.",
     references: "https://docs.getdbt.com/docs/build/data-tests#generic-data-tests",
     dbtVersionFocus: "Core"
   },
@@ -646,9 +603,9 @@ dependencies:
     difficulty: "Intermediate",
     questionText: "An analytics engineer completes code changes for a single downstream model named `fct_user_retention`. They want to compile, run, and replace this model inside the database but skip compiling and executing any matching column assertions or source validation tests. Which command performs this isolated operation?",
     options: [
-      "dbt build --select fct_user_retention --exclude-tests",
-      "dbt run --select fct_user_retention",
-      "dbt test --select fct_user_retention --skip-asserts",
+      "dbt build `--select` fct_user_retention --exclude-tests",
+      "dbt run `--select` fct_user_retention",
+      "dbt test `--select` fct_user_retention --skip-asserts",
       "dbt run --model fct_user_retention+ --no-tests"
     ],
     correctAnswers: [1],
@@ -665,7 +622,7 @@ dependencies:
       "Move the descriptions directly into separate inline comments using SQL '--' markers in the model code files.",
       "Use dbt doc blocks. You create a `.md` developer file in your project containing description fragments enclosed within `{% docs block_name %}` and `{% enddocs %}` tags, then reference them in your schema YAML using the Jinja function `{{ doc('block_name') }}`.",
       "Define and import static json tables using seed files configured in target paths.",
-      "Create a separate document under target/manifest.json manually using REST APIs."
+      "Create a separate document under `target/`manifest.json manually using REST APIs."
     ],
     correctAnswers: [1],
     explanation: "dbt doc blocks allow cleanly moving verbose database descriptions out of schema YAML files. By placing descriptions inside `.md` files wrapped in `{% docs block_name %}` wrappers, developers keep properties tidy and reference them simply with `{{ doc('block_name') }}` within YAML schema fields.",
@@ -676,7 +633,7 @@ dependencies:
     id: 33,
     category: "Debug Data Models",
     difficulty: "Intermediate",
-    questionText: "A dbt run fails with a compiler error: 'Compilation Error: Found a cyclic dependency between dim_customers and fct_orders.' How does this error occur in dbt projects, and how should it be corrected?",
+    questionText: "A `dbt run` fails with a compiler error: 'Compilation Error: Found a cyclic dependency between dim_customers and fct_orders.' How does this error occur in dbt projects, and how should it be corrected?",
     options: [
       "It occurs because both models are configured with identical database target table schemas.",
       "It occurs because model `dim_customers` references `fct_orders` via a `{{ ref() }}` function, while `fct_orders` simultaneously references `dim_customers` via `{{ ref() }}`. To resolve this, the circular reference must be broken, typically by extracting shared logic into a common upstream staging or lookup model.",
@@ -744,7 +701,7 @@ dependencies:
     options: [
       "Add 'continue_on_fail: true' directly to target model properties.",
       "Assign detailed properties under the test definition in schema YAML, adding `severity: warn` or configuring threshold counts using `error_if` and `warn_if` parameters.",
-      "Change the database driver configurations inside profiles.yml to ignore all warning constraints.",
+      "Change the database driver configurations inside `profiles.yml` to ignore all warning constraints.",
       "Warning configurations are only possible inside custom singular generic SQL test files."
     ],
     correctAnswers: [1],
@@ -774,7 +731,7 @@ dependencies:
     difficulty: "Intermediate",
     questionText: "To implement access audit logging or clean up auxiliary staging tables, a developer wants to run a raw SQL command immediately before or after a model is built. What is the correct way to declare this behavior inside dbt models?",
     options: [
-      "Configure standard SQL views to execute in series using macro call chains inside raw profiles.yml.",
+      "Configure standard SQL views to execute in series using macro call chains inside raw `profiles.yml`.",
       "Use pre-hooks and post-hooks. They can be defined inside the model `config()` block or inside `dbt_project.yml` using `pre_hook` and `post_hook` parameters, passing direct raw SQL statements or macro builders to execute.",
       "Modify the database schema manually by adding database trigger functions on compile targets.",
       "Pre-hooks and post-hooks are deprecated; developers must use ephemeral staging tables instead."
@@ -826,7 +783,7 @@ dependencies:
     id: 42,
     category: "Develop Models",
     difficulty: "Advanced",
-    questionText: "An analytics engineer materializes a staging model as 'ephemeral'. In a downstream data model, they reference this ephemeral model three times inside distinct JOIN subqueries. How does dbt compile this logic, and what are the performance and cost implications?",
+    questionText: "An analytics engineer materializes a staging model as 'ephemeral'. In a downstream data model, they reference this ephemeral model three times inside distinct JOIN subqueries. How does `dbt compile` this logic, and what are the performance and cost implications?",
     options: [
       "dbt creates a temporary database view for the ephemeral model, which is dropped automatically after the downstream model finishes compiling.",
       "dbt compiles the ephemeral model as a single Common Table Expression (CTE) at the top of the SQL file, then references it three times natively, optimizing compute charges.",
@@ -842,7 +799,7 @@ dependencies:
     id: 43,
     category: "Develop Models",
     difficulty: "Associate",
-    questionText: "Which statement accurately describes the compilation and lineage difference between referencing a raw table using the standard 'source('source_name', 'table_name')' Jinja function versus referencing a model using the 'ref('model_name')' function in dbt?",
+    questionText: "Which statement accurately describes the compilation and lineage difference between referencing a raw table using the standard `source('source_name', 'table_name')` Jinja function versus referencing a model using the `ref('model_name')` function in dbt?",
     options: [
       "The 'source' function tells dbt that the resource is an externally loaded table not created by dbt, creating an entry point for lineage. The 'ref' function references a dbt-governed model and dynamically establishes execution sequence dependencies in the DAG.",
       "The 'ref' function is only valid for tables vectorized as views, while 'source' applies exclusively to tables materialized incrementally.",
@@ -874,7 +831,7 @@ dependencies:
     id: 45,
     category: "Develop Models",
     difficulty: "Intermediate",
-    questionText: "An analytics engineer creates two separate SQL files in their project: one at 'models/staging/marketing/stg_customers.sql' and another at 'models/staging/sales/stg_customers.sql'. How does dbt handle this configuration when they run 'dbt compile'?",
+    questionText: "An analytics engineer creates two separate SQL files in their project: one at `models/staging/marketing/stg_customers.sql` and another at `models/staging/sales/stg_customers.sql`. How does dbt handle this configuration when they run 'dbt compile'?",
     options: [
       "dbt compiles both successfully because they reside in isolated directories, and resolves references using relative directories.",
       "dbt raises a compilation error because all compiled model names inside a dbt project must be globally unique, regardless of their subdirectory path configuration.",
@@ -890,12 +847,12 @@ dependencies:
     id: 46,
     category: "Develop Models",
     difficulty: "Intermediate",
-    questionText: "A data pipeline needs to run targeting dynamic historical dates. A variable list is declared in 'dbt_project.yml' under 'vars'. However, the developer runs dbt with a CLI override command. How does dbt resolve the variable priority?",
+    questionText: "A data pipeline needs to run targeting dynamic historical dates. A variable list is declared in `dbt_project.yml` under 'vars'. However, the developer runs dbt with a CLI override command. How does dbt resolve the variable priority?",
     codeSnippet: `dbt run --vars '{"cutoff_date": "2026-01-01"}'`,
     options: [
       "dbt merges both parameters, with variables defined in files taking absolute precedence.",
       "dbt overrides any file-level definition and executes with the CLI value ('2026-01-01') exclusively.",
-      "dbt raises a validation error, forcing the developer to remove the variable declaration from 'dbt_project.yml' before launching overrides.",
+      "dbt raises a validation error, forcing the developer to remove the variable declaration from `dbt_project.yml` before launching overrides.",
       "dbt appends the values together as a nested query list."
     ],
     correctAnswers: [1],
@@ -947,7 +904,7 @@ dependencies:
       "Database systems allow altering views directly to tables. The error is caused by connection timeouts.",
       "Many databases prevent replacing an existing VIEW with a TABLE (or vice-versa) using standard create statements. dbt mitigates this by running pre-flight lookups; on detection of a relation type changes, dbt automatically issues 'DROP VIEW' or 'DROP TABLE' statements before compiling the new structure.",
       "Adapters require the database to be completely restarted to flush the metadata cache.",
-      "The engineer must manually configure 'materialization_change: true' inside profiles.yml."
+      "The engineer must manually configure 'materialization_change: true' inside `profiles.yml`."
     ],
     correctAnswers: [1],
     explanation: "In SQL databases, you cannot execute `CREATE TABLE` over an object that is currently a `VIEW` without dropping it first. dbt handles this by checking the catalog before building. If dbt detects a type conflict (e.g., trying to write a table over a legacy view), it automatically issues appropriate drop statements to clear the destination namespace prior to creation.",
@@ -961,9 +918,9 @@ dependencies:
     questionText: "During Slim CI diagnostic checks, a developer wants to inspect the exact, fully compiled SQL query of a failing model named 'stg_payments' before it gets executed. Where should they look inside the project filesystem to inspect this output?",
     options: [
       "In the root directory under the 'logs/dbt.log' file exclusively.",
-      "Inside the 'target/compiled/staging/stg_payments.sql' file, which records the fully-resolved Jinja statements.",
-      "Within 'target/run/staging/stg_payments.sql', which records raw SQL wrapping transaction wrappers.",
-      "Inside 'sources.json' generated in the root configuration directories."
+      "Inside the `target/compiled/staging/stg_payments.sql` file, which records the fully-resolved Jinja statements.",
+      "Within `target/run/staging/stg_payments.sql`, which records raw SQL wrapping transaction wrappers.",
+      "Inside `sources.json` generated in the root configuration directories."
     ],
     correctAnswers: [1],
     explanation: "dbt writes all compile artifacts to the `target/` directory. The file path `target/compiled/...` holds the pure compiled SQL with all Jinja references and logic resolved (e.g., sources/refs converted to raw database paths). This is ideal for copying and pasting directly into database query consoles to troubleshoot compilation issues.",
@@ -977,12 +934,12 @@ dependencies:
     questionText: "When onboarding a new analytics developer, they run 'dbt debug'. What is the primary purpose of this command compared to 'dbt compile' or 'dbt run'?",
     options: [
       "It compiles and validates all custom Jinja macros to check for circular imports.",
-      "It performs a full-scale test of the pipeline database driver connection, checking the presence and syntax validity of profiles.yml, operating system environment variables, database credential handshakes, and diagnostic logs.",
+      "It performs a full-scale test of the pipeline database driver connection, checking the presence and syntax validity of `profiles.yml`, operating system environment variables, database credential handshakes, and diagnostic logs.",
       "It boots an interactive local debugging user terminal where developers can query operational database rows directly.",
       "It drops all dev schemas and recreates them to ensure clean environments."
     ],
     correctAnswers: [1],
-    explanation: "`dbt debug` does not parse or run models. Instead, it tests the dev environment configuration: validating CLI parameters, confirming the profiles.yml file is structured correctly and exists, verifying database connection logins (host, username, password handshakes), and checking python/git dependencies.",
+    explanation: "`dbt debug` does not parse or run models. Instead, it tests the dev environment configuration: validating CLI parameters, confirming the `profiles.yml` file is structured correctly and exists, verifying database connection logins (host, username, password handshakes), and checking python/git dependencies.",
     references: "https://docs.getdbt.com/reference/commands/debug",
     dbtVersionFocus: "Core Setup Guides"
   },
@@ -998,7 +955,7 @@ dependencies:
       "Remove the 'threads' config altogether; dbt requires a static thread count of 100 for proper execution."
     ],
     correctAnswers: [1],
-    explanation: "The `threads` setting defines the maximum number of concurrent warehouse connections. While higher thread settings can speed up execution, they can cause transaction deadlock errors if parallel models try to write or lock overlapping resources. Temporarily setting `threads: 1` in profiles.yml helps you locate exactly which models are competing for identical resources.",
+    explanation: "The `threads` setting defines the maximum number of concurrent warehouse connections. While higher thread settings can speed up execution, they can cause transaction deadlock errors if parallel models try to write or lock overlapping resources. Temporarily setting `threads: 1` in `profiles.yml` helps you locate exactly which models are competing for identical resources.",
     references: "https://docs.getdbt.com/docs/core/connect-data-platform/profiles.yml#understanding-threads",
     dbtVersionFocus: "Core Connection Profiles"
   },
@@ -1010,7 +967,7 @@ dependencies:
     options: [
       "Run 'dbt run --full-refresh' to bypass database schema checks on legacy structures.",
       "Analyze the compiler output log or standard error block to locate the loop variables (e.g. Model A -> Model B -> Model A). Resolve this by extracting the circular queries into a static seed file, or by breaking the chain using staging models.",
-      "Configure multiple profile targets inside profiles.yml and isolate the compilation runs.",
+      "Configure multiple profile targets inside `profiles.yml` and isolate the compilation runs.",
       "Convert the tables to ephemeral materialization which natively supports circular references."
     ],
     correctAnswers: [1],
@@ -1041,7 +998,7 @@ dependencies:
     questionText: "An analytics engineer running complex continuous integration checks wants to accelerate pre-flight validation by compiling project manifest dependencies locally. What does 'dbt parse' do, and what output is cached?",
     options: [
       "It executes tests against raw schemas without modifying underlying indexes.",
-      "It parses the entire dbt project structure (Jinja code, macros, sources, specs) to generate and cache the manifest.json file, verifying file properties without executing any queries against the destination warehouse.",
+      "It parses the entire dbt project structure (Jinja code, macros, sources, specs) to generate and cache the `manifest.json` file, verifying file properties without executing any queries against the destination warehouse.",
       "It compiles model views but skips processing columns with active model contracts.",
       "It compares production and staging schemas, physically dropping tables if they deviate."
     ],
@@ -1057,7 +1014,7 @@ dependencies:
     questionText: "When using third-party dbt packages (like dbt-utils), a developer wants to customize a variables setting declared inside the imported package. How is the variable value resolution completed under dbt Core architecture?",
     options: [
       "The package variables must be redefined by editing the packages files directly inside the 'dbt_packages/' folder.",
-      "The developer redefines the package variable in their own local 'dbt_project.yml' file under the 'vars' block. Local project declarations natively override any default values specified in package layers.",
+      "The developer redefines the package variable in their own local `dbt_project.yml` file under the 'vars' block. Local project declarations natively override any default values specified in package layers.",
       "Packages cannot be customized; the variables must be registered as database profiles.",
       "Create a singular seed file matching the variables structure and register it under the seed configurations."
     ],
@@ -1105,9 +1062,9 @@ dependencies:
     questionText: "To support rich documentation catalog generation, a dbt developer wants to reference descriptions written inside a separate markdown (.md) file using the Jinja 'doc()' function. What is the correct criteria for this markdown file?",
     options: [
       "The markdown file must be named 'descriptions.md' and reside in the system target directory.",
-      "The description must be wrapped in a named docs block using '{% docs block_name %}' and '{% enddocs %}' tags. The file can be located anywhere in the paths defined in 'model-paths' or 'docs-paths' (inside dbt_project.yml).",
+      "The description must be wrapped in a named docs block using '{% docs block_name %}' and '{% enddocs %}' tags. The file can be located anywhere in the paths defined in 'model-paths' or 'docs-paths' (inside `dbt_project.yml`).",
       "The markdown wrapper can only contain plain text with zero custom markdown layouts.",
-      "Doc files must be checked into profiles.yml connection settings to enable compilation."
+      "Doc files must be checked into `profiles.yml` connection settings to enable compilation."
     ],
     correctAnswers: [1],
     explanation: "dbt retrieves markdown descriptions using docs blocks. To register a description, place it inside a `.md` file in the configured dbt model or document paths wrapped in a unique block identifier: `{% docs custom_desc_key %}`. Then, reference it in your schema YAML using `{{ doc('custom_desc_key') }}`.",
@@ -1128,7 +1085,7 @@ dependencies:
     options: [
       "Add a 'continue: true' configuration inline with the column name.",
       "Add a 'config:' property block inside the test configuration, specifying 'severity: warn' or setting failure tolerances using the 'warn_if' and 'error_if' properties.",
-      "Configure global test severity limits exclusively inside profiles.yml target parameters.",
+      "Configure global test severity limits exclusively inside `profiles.yml` target parameters.",
       "Tests cannot be configured to warn; failures must always return complete system compile exceptions."
     ],
     correctAnswers: [1],
@@ -1159,12 +1116,12 @@ dependencies:
     questionText: "In dbt Core v1.8+, how does an engineer run ONLY the unit tests defined in their project while completely bypassing any generic tests or custom singular SQL assertions?",
     options: [
       "dbt run --tests-only",
-      "dbt test --select \"test_type:unit\"",
+      "dbt test `--select` \"test_type:unit\"",
       "dbt test --exclude \"test_scope:singular\"",
-      "dbt build --select unit:*"
+      "dbt build `--select` unit:*"
     ],
     correctAnswers: [1],
-    explanation: "To selectively run dbt unit tests (which execute mock data assertions entirely in memory) and exclude schema generic tests (which hit the live database), developers use the specific test selector: `dbt test --select \"test_type:unit\"`. This isolates the unit testing phase from regular data quality tests.",
+    explanation: "To selectively run dbt unit tests (which execute mock data assertions entirely in memory) and exclude schema generic tests (which hit the live database), developers use the specific test selector: `dbt test `--select` \"test_type:unit\"`. This isolates the unit testing phase from regular data quality tests.",
     references: "https://docs.getdbt.com/docs/build/unit-tests#running-unit-tests",
     dbtVersionFocus: "v1.8+ (Unit Testing Selector)"
   },
@@ -1173,7 +1130,6 @@ dependencies:
     category: "Deploy dbt Projects",
     difficulty: "Advanced",
     questionText: "In modern dbt Slim CI configurations, you run dbt with both '--defer' and '--state' flags. What is the fundamental behavior of this setup when executing modified models locally, and does it copy production records?",
-    codeSnippet: `dbt build --select state:modified+ --defer --state target_prod_artifacts`,
     options: [
       "dbt copies all production tables matching the modified model dependencies locally to avoid permissions errors.",
       "dbt runs only the modified models in your dev dataset. For unmodified model dependencies, instead of requiring you to run or clone them locally, dbt redirects references to compile targeting the production tables in your prod database, utilizing the metadata manifest from the production environment.",
@@ -1191,13 +1147,13 @@ dependencies:
     difficulty: "Intermediate",
     questionText: "When assessing multi-project lineage and structural layouts, a developer opens dbt Explorer. What metadata files must be generated to feed compiled info to dbt Explorer (or generate core lineage panels)?",
     options: [
-      "Both 'manifest.json' and 'catalog.json' generated under the target/ directory must be provided.",
-      "Only the 'profiles.yml' file with decrypted password sequences should be supplied.",
+      "Both `manifest.json` and `catalog.json` generated under the `target/` directory must be provided.",
+      "Only the `profiles.yml` file with decrypted password sequences should be supplied.",
       "Explorer reads live SQL code repositories and does not parse static files.",
-      "Only 'sources.json' and 'run_results.json' are consumed."
+      "Only `sources.json` and `run_results.json` are consumed."
     ],
     correctAnswers: [0],
-    explanation: "dbt Explorer (and standard documentation commands) are powered by compiling metadata from two critical files: `manifest.json` (which captures model configurations, dependencies, descriptions, and the system DAG structure) and `catalog.json` (which captures actual physical schema data types, table sizes, and row counts from the warehouse).",
+    explanation: "CORRECT ACTION:\ndbt Explorer (and standard documentation commands) are powered by compiling metadata from two critical files: `manifest.json` (which captures model configurations, dependencies, descriptions, and the system DAG structure) and `catalog.json` (which captures actual physical schema data types, table sizes, and row counts from the warehouse).\n\nINCORRECT COMPETING OPTIONS:\n- Only profiles.yml with decrypted passwords: Credential profiles contain network authentication secrets and are never read or stored by dbt Explorer for catalog lineage parsing.\n- Explorer reads live SQL repositories: Explorer operates on compiled JSON build artifacts rather than scanning raw git repositories directly.\n- Only sources.json and run_results.json: While `run_results.json` records invocation metrics, `manifest.json` and `catalog.json` are the foundational requirements for rendering data documentation and lineage graphs.",
     references: "https://docs.getdbt.com/docs/collaborate/explore-projects",
     dbtVersionFocus: "v1.10+ (dbt Explorer metadata)"
   },
@@ -1206,14 +1162,9 @@ dependencies:
     category: "Deploy dbt Projects",
     difficulty: "Intermediate",
     questionText: "How can an analytics engineer safely handle production warehouse credentials without committing raw secrets (like passwords or tokens) into git repositories?",
-    codeSnippet: `prod:
-  outputs:
-    prod_target:
-      type: snowflake
-      password: "{{ env_var('DBT_PROD_PASSWORD') }}"`,
     options: [
-      "Passwords can be hardcoded because profiles.yml is automatically encrypted compile-time.",
-      "Use the Jinja 'env_var()' function in the profiles.yml file to dynamically load secret tokens or passwords from the environment at runtime, keeping secrets out of git repositories.",
+      "Passwords can be hardcoded because `profiles.yml` is automatically encrypted compile-time.",
+      "Use the Jinja `env_var()` function in the `profiles.yml` file to dynamically load secret tokens or passwords from the environment at runtime, keeping secrets out of git repositories.",
       "Store credentials in a public seed file and register it under the model parameters.",
       "dbt does not require passwords in production targets if running on Cloud runners."
     ],
@@ -1226,7 +1177,7 @@ dependencies:
     id: 66,
     category: "Develop Models",
     difficulty: "Advanced",
-    questionText: "When configuring a dbt snapshot using the check strategy, how does dbt detect row modifications when one or more of the monitored columns contain null values, and what is the recommended workaround?",
+    questionText: "When configuring a `dbt snapshot` using the check strategy, how does dbt detect row modifications when one or more of the monitored columns contain null values, and what is the recommended workaround?",
     options: [
       "dbt automatically treats null values as empty strings and checks them correctly using standard equality checks.",
       "dbt uses standard SQL equality operators (=) inside snapshots. Since comparing null values in SQL evaluates to unknown (null = null is unknown), any null values in check columns may cause dbt to fail to detect changes. To prevent this, developers should use strategy: timestamp, or employs a coalesced SQL expression in a custom snapshot view.",
@@ -1242,11 +1193,11 @@ dependencies:
     id: 67,
     category: "Deploy dbt Projects",
     difficulty: "Advanced",
-    questionText: "An analytics engineer creates a custom generate_schema_name macro. Why is it standard practice to retain a check for target.name or target.profile inside this macro, and what is the potential risk if we simply return custom_schema_name directly?",
+    questionText: "An analytics engineer creates a custom `generate_schema_name` macro. Why is it standard practice to retain a check for target.name or target.profile inside this macro, and what is the potential risk if we simply return custom_schema_name directly?",
     options: [
       "Without target condition checking, dbt would fail to compile because custom schema macros require database-specific configurations.",
       "If you return the custom schema name directly without checking the target, dbt will use the exact custom schema name in both development and production. This causes development run executions to write directly to production schemas, violating developer sandbox boundaries.",
-      "Removing the check prevents dbt from creating corresponding catalog.json files.",
+      "Removing the check prevents dbt from creating corresponding `catalog.json` files.",
       "The compiler restricts custom macro overrides unless they possess a recursive conditional check."
     ],
     correctAnswers: [1],
@@ -1258,7 +1209,7 @@ dependencies:
     id: 68,
     category: "Develop Models",
     difficulty: "Advanced",
-    questionText: "An incremental model is configured with a unique_key constraint. During execution, some records returned by the source model query contain null values in the unique key column. How do common database adapters (such as Snowflake or BigQuery) handle these records, and what is the resulting side-effect?",
+    questionText: "An incremental model is configured with a `unique_key` constraint. During execution, some records returned by the source model query contain null values in the unique key column. How do common database adapters (such as Snowflake or BigQuery) handle these records, and what is the resulting side-effect?",
     options: [
       "The adapter automatically drops records containing null unique keys to safeguard database integrity.",
       "The adapter halts execution and aborts the active transaction with a primary key constraint error.",
@@ -1274,11 +1225,11 @@ dependencies:
     id: 69,
     category: "Debug Data Models",
     difficulty: "Advanced",
-    questionText: "When writing a custom dbt macro that queries the database catalog (utilizing helpers like run_query), the compilation fails during dbt compile, yet executes successfully during dbt run. What dbt architecture concept explains this discrepancy, and what is the correct syntax fix?",
+    questionText: "When writing a custom dbt macro that queries the database catalog (utilizing helpers like run_query), the compilation fails during `dbt compile`, yet executes successfully during `dbt run`. What dbt architecture concept explains this discrepancy, and what is the correct syntax fix?",
     options: [
       "dbt compile runs locally and lacks network access to the target database.",
       "During dbt's initial 'parsing' phase, dbt compiles Jinja expressions to build the DAG manifest without executing queries. Statements like run_query return empty or virtual objects during this phase, causing subsequent code processing to fail. Wrapping the macro's database execution blocks in '{% if execute %}' ensures SQL only executes when a command is active.",
-      "Custom macros must be registered inside profiles.yml to enable access during compiling runs.",
+      "Custom macros must be registered inside `profiles.yml` to enable access during compiling runs.",
       "All macros that query catalogs must run as pre-hooks instead of being referenced in standard models."
     ],
     correctAnswers: [1],
@@ -1322,7 +1273,7 @@ dependencies:
     id: 72,
     category: "Debug Data Models",
     difficulty: "Intermediate",
-    questionText: "If a model's materialization statement encounters a syntax error or execution failure during dbt run, does dbt execute the post-hook defined for that model?",
+    questionText: "If a model's materialization statement encounters a syntax error or execution failure during `dbt run`, does dbt execute the post-hook defined for that model?",
     options: [
       "Yes, dbt runs post-hooks as rollback instructions in a separate transaction block.",
       "No, post-hooks only run if the model builds and materializes successfully in the target warehouse. If the model query fails, dbt aborts downstream processes and skips the post-hook.",
@@ -1358,8 +1309,8 @@ dependencies:
     questionText: "When planning a dbt transformation strategy, why is storing large, frequently updated transactional tables as dbt seeds considered a major anti-pattern?",
     options: [
       "dbt seeds are converted to views, causing expensive downstream scans.",
-      "Seeds are designed for small, static data values (like country lookup codes or mapping ids). Since they are tracked in version control, committing large CSV files bloats the Git history, degrades dbt parse performance, and bypasses standard data loading/orchestration pathways.",
-      "Creating seeds requires administrator privileges inside profiles.yml settings.",
+      "Seeds are designed for small, static data values (like country lookup codes or mapping ids). Since they are tracked in version control, committing large CSV files bloats the Git history, degrades `dbt parse` performance, and bypasses standard data loading/orchestration pathways.",
+      "Creating seeds requires administrator privileges inside `profiles.yml` settings.",
       "Seeds cannot be integrated into lineage DAG views inside the dbt documentation parser."
     ],
     correctAnswers: [1],
@@ -1371,7 +1322,7 @@ dependencies:
     id: 75,
     category: "Test and Document Models",
     difficulty: "Advanced",
-    questionText: "If you configure dbt source freshness checks, what happens if a source table does not physically exist in the target database when dbt source freshness is executed, and how can the team prevent CI breaks?",
+    questionText: "If you configure `dbt source freshness` checks, what happens if a source table does not physically exist in the target database when `dbt source freshness` is executed, and how can the team prevent CI breaks?",
     options: [
       "dbt ignores the discrepancy and continues checks against remaining tables.",
       "dbt evaluates freshness using git history times and skips connection requests.",
@@ -1387,7 +1338,7 @@ dependencies:
     id: 76,
     category: "Deploy dbt Projects",
     difficulty: "Intermediate",
-    questionText: "After a dbt execution finishes, a run_results.json file is generated inside the target/ directory. What telemetry metadata does this file primarily capture, and what is its main use case?",
+    questionText: "After a dbt execution finishes, a `run_results.json` file is generated inside the `target/` directory. What telemetry metadata does this file primarily capture, and what is its main use case?",
     options: [
       "It captures the actual column values for every row calculated inside the current run.",
       "It logs the execution outcomes, compilation and runtime durations, success/failure statuses, and adapter-native database responses for every single node in the DAG, allowing orchestration and monitoring tools to parse pipeline metadata.",
@@ -1403,11 +1354,11 @@ dependencies:
     id: 77,
     category: "Develop Models",
     difficulty: "Intermediate",
-    questionText: "A developer writes a custom SQL script containing standard references and places it in the analyses/ folder. What is the compiling behavior when they execute dbt run?",
+    questionText: "A developer writes a custom SQL script containing standard references and places it in the analyses/ folder. What is the compiling behavior when they execute `dbt run`?",
     options: [
       "dbt compiles the script and materializes it in the target database as a table.",
-      "dbt completely ignores files in the analyses folder unless dbt compile is explicitly executed.",
-      "dbt parses the file, resolves the Jinja expressions (such as ref() and source()), and compiles it down to pure SQL in the target/compiled/ directory, but never materializes it in the database. This is used for one-off diagnostic or research queries.",
+      "dbt completely ignores files in the analyses folder unless `dbt compile` is explicitly executed.",
+      "dbt parses the file, resolves the Jinja expressions (such as ref() and source()), and compiles it down to pure SQL in the `target/`compiled/ directory, but never materializes it in the database. This is used for one-off diagnostic or research queries.",
       "dbt raises a compilation loop error because analyses cannot contain refs."
     ],
     correctAnswers: [2],
@@ -1435,11 +1386,11 @@ dependencies:
     id: 79,
     category: "Develop Models",
     difficulty: "Intermediate",
-    questionText: "A developer defines a model's materialization in three separate locations: dbt_project.yml sets it as 'view' for the directory, schema.yml sets it as 'ephemeral', and the model's inline SQL config() block sets it as 'table'. How will the compiling engine materialize this model?",
+    questionText: "A developer defines a model's materialization in three separate locations: `dbt_project.yml` sets it as 'view' for the directory, schema.yml sets it as 'ephemeral', and the model's inline SQL config() block sets it as 'table'. How will the compiling engine materialize this model?",
     options: [
       "It materializes as a view because the global project file has the highest priority.",
       "It materializes as ephemeral because yml files are parsed after sql configurations.",
-      "It materializes as a table. Configuration precedence follows a strict hierarchy: the inline SQL config() function takes absolute priority, followed by schema.yml configs, followed by dbt_project.yml defaults.",
+      "It materializes as a table. Configuration precedence follows a strict hierarchy: the inline SQL config() function takes absolute priority, followed by schema.yml configs, followed by `dbt_project.yml` defaults.",
       "dbt terminates compilation and displays a config conflict check exception."
     ],
     correctAnswers: [2],
@@ -1451,7 +1402,7 @@ dependencies:
     id: 80,
     category: "Develop Models",
     difficulty: "Advanced",
-    questionText: "Under incremental materialization on Snowflake or BigQuery, how can a developer configure dbt to only modify a specific subset of columns (e.g., updated_at, status) upon matching unique keys, instead of overriding all columns?",
+    questionText: "Under incremental materialization on Snowflake or BigQuery, how can a developer configure dbt to only modify a specific subset of columns (e.g., `updated_at`, status) upon matching unique keys, instead of overriding all columns?",
     options: [
       "Set the configuration on_schema_change: ignore in the project level configs.",
       "Use the merge_update_columns configuration in the model config() block, passing a list of specific columns. On a unique key match during a MERGE operation, only these listed columns will be updated.",
@@ -1492,7 +1443,7 @@ dependencies:
     id: 82,
     category: "Develop Models",
     difficulty: "Intermediate",
-    questionText: "In multi-project dbt Mesh structures, an engineer is assigning boundaries to protect internal models. What is the fundamental behavioral difference between assigning a model 'access: private' versus 'access: protected'?",
+    questionText: "In multi-project dbt Mesh structures, an engineer is assigning boundaries to protect internal models. What is the fundamental behavioral difference between assigning a model `access: private` versus `access: protected`?",
     codeSnippet: `models:
   - name: int_sales_calculations
     config:
@@ -1513,7 +1464,7 @@ dependencies:
     id: 83,
     category: "Deploy dbt Projects",
     difficulty: "Advanced",
-    questionText: "When writing profiles.yml target connection logic, what is the best practice for handling sensitive database tokens using environment variables, and how has env_var defaults handling evolved in modern dbt Core?",
+    questionText: "When writing `profiles.yml` target connection logic, what is the best practice for handling sensitive database tokens using environment variables, and how has env_var defaults handling evolved in modern dbt Core?",
     codeSnippet: `prod:
   outputs:
     prod_target:
@@ -1542,7 +1493,7 @@ dependencies:
     codeLanguage: "yaml",
     options: [
       "We edit the code files physically inside dbt_packages/dbt_utils/macros/ to match local rules.",
-      "We configure a dispatch block in our local 'dbt_project.yml' defining a custom search_order. Placing our home project namespace ('my_project') ahead of the 'dbt_utils' package namespace forces dbt's compiler to execute our local macro instead when dbt_utils calls 'generate_candidate_key' internally.",
+      "We configure a dispatch block in our local `dbt_project.yml` defining a custom search_order. Placing our home project namespace ('my_project') ahead of the 'dbt_utils' package namespace forces dbt's compiler to execute our local macro instead when dbt_utils calls 'generate_candidate_key' internally.",
       "We rename our local macro to 'dbt_utils__generate_candidate_key' to shadow the global namespace.",
       "Macros imported from secondary packages cannot be shadowed or overwritten; they reside in a sealed dependency layer."
     ],
@@ -1588,7 +1539,7 @@ dependencies:
 {% endif %}`,
     codeLanguage: "jinja",
     options: [
-      "It throws a compilation exception immediately and crashes the dbt build.",
+      "It throws a compilation exception immediately and crashes the `dbt build`.",
       "It returns a specialized string representing 'relation_not_found_exception'.",
       "It returns evaluated compilation properties as None (rather than crashing). Because of this, developers must always use a conditional check (such as 'is not none') before attempting to access methods or fields on the returned relation.",
       "It constructs a virtual ephemeral table in local memory containing zero schema types."
@@ -1602,7 +1553,7 @@ dependencies:
     id: 87,
     category: "Develop Models",
     difficulty: "Advanced",
-    questionText: "A data team has been maintaining a dbt snapshot table tracking customer memberships for months. During an upstream system migration, a new column called 'loyalty_tier' is added to the source. How does dbt handle the existing snapshot database table on the next execution run?",
+    questionText: "A data team has been maintaining a `dbt snapshot` table tracking customer memberships for months. During an upstream system migration, a new column called 'loyalty_tier' is added to the source. How does dbt handle the existing snapshot database table on the next execution run?",
     options: [
       "dbt completely reconstructs the snapshot table from scratch, wiping historical changelogs.",
       "dbt automatically detects the new column and issues an ALTER TABLE statement to append the nullable column to the target database snapshot table. However, existing log rows already tracked in the snapshot will contain NULL values for this column, and dbt does not retrospectively backfill them.",
@@ -1640,12 +1591,12 @@ dbt run --select "tag:hourly path:models/staging"`,
     questionText: "When executing 'dbt deps', a development environment fails with a version conflict error because two different imported packages (e.g., fivetran_log and dbt_utils) are requesting mutually incompatible versions of a shared transitive helper package. How must this conflict be resolved?",
     options: [
       "dbt's compiler automatically chooses the newest version and overrides conflict prompts.",
-      "Packages must be edited by checking the source repositories and modifying packages.yml inside the local dbt_packages/ directory.",
-      "dbt's package manager does not automatically resolve mutual version conflicts. To resolve this, developers can explicitly declare and pin a specific compatible version of the conflicting package in their main project's packages.yml file, overriding downstream dependencies.",
-      "The developer must delete the packages.yml file altogether and rely on system-wide python libraries."
+      "Packages must be edited by checking the source repositories and modifying `packages.yml` inside the local dbt_packages/ directory.",
+      "dbt's package manager does not automatically resolve mutual version conflicts. To resolve this, developers can explicitly declare and pin a specific compatible version of the conflicting package in their main project's `packages.yml` file, overriding downstream dependencies.",
+      "The developer must delete the `packages.yml` file altogether and rely on system-wide python libraries."
     ],
     correctAnswers: [2],
-    explanation: "dbt's dependency solver throws conflicts when nested packages require overlapping, incompatible version constraints. Because the main project's configurations override package-level imports, declaring the package configuration directly in your root packages.yml defines a master constraint that dbt uses to resolve matches during installation.",
+    explanation: "dbt's dependency solver throws conflicts when nested packages require overlapping, incompatible version constraints. Because the main project's configurations override package-level imports, declaring the package configuration directly in your root `packages.yml` defines a master constraint that dbt uses to resolve matches during installation.",
     references: "https://docs.getdbt.com/docs/build/packages#package-version-conflicts",
     dbtVersionFocus: "Dependency Management"
   },
@@ -1667,7 +1618,7 @@ dbt run --select "tag:hourly path:models/staging"`,
       "Mock inputs must be stored inside raw CSV files checked into the seeds/ directory.",
       "Mock rows are declared in-line as YAML dictionary structures under the 'given' and 'rows' fields inside a schema properties .yml file (normally placed matching the target model's directory). dbt compiles these mocked records to validate logic sans physical database scans.",
       "Unit tests mock data must be registered as database views inside target profiles structures.",
-      "Mock data formats are configured entirely in the project's dbt_project.yml file under global mock parameters."
+      "Mock data formats are configured entirely in the project's `dbt_project.yml` file under global mock parameters."
     ],
     correctAnswers: [1],
     explanation: "Under the modern unit testing framework (v1.8+), tests are declared directly in schema properties `.yml` files. Instead of using real warehouse tables, developers declare virtual input records of mocked states inside the `given` configuration schema, enabling robust unit validation for complex SQL business rules during Slim CI iterations.",
@@ -1678,7 +1629,7 @@ dbt run --select "tag:hourly path:models/staging"`,
     id: 91,
     category: "Test and Document Models",
     difficulty: "Advanced",
-    questionText: "When configuring dbt source freshness checks on a massive, several-terabyte database table on BigQuery or Snowflake, what is a major performance and financial gotcha, and how is it resolved in source properties?",
+    questionText: "When configuring `dbt source freshness` checks on a massive, several-terabyte database table on BigQuery or Snowflake, what is a major performance and financial gotcha, and how is it resolved in source properties?",
     codeSnippet: `sources:
   - name: heavy_clicks
     tables:
@@ -1689,7 +1640,7 @@ dbt run --select "tag:hourly path:models/staging"`,
     codeLanguage: "yaml",
     options: [
       "Freshness is computed inside local computer memories, meaning large tables cause local memory failures.",
-      "By default, dbt executes full-table scans to calculate MAX(loaded_at_field). On large warehouses, this triggers massive compute bills and can hit execution query limits. To resolve this, developers can add a 'filter' configuration in the source properties, which limits the SQL scan slice (e.g. partition limits) mapped during query compile states.",
+      "By default, dbt executes full-table scans to calculate MAX(`loaded_at_field`). On large warehouses, this triggers massive compute bills and can hit execution query limits. To resolve this, developers can add a 'filter' configuration in the source properties, which limits the SQL scan slice (e.g. partition limits) mapped during query compile states.",
       "The freshness command fails instantly on partitioned schemas; tables must be converted to non-partitioned indices.",
       "freshness queries must be stored inside pre-hook tables to bypass catalog limits."
     ],
@@ -1715,7 +1666,7 @@ dbt run --select "tag:hourly path:models/staging"`,
     codeLanguage: "jinja",
     options: [
       "require_partition_filter is unsupported on dates; it only applies to integer range clusters.",
-      "If partitioning conditions are not evaluated in dbt's MERGE or update clauses, BigQuery aborts the run because a partition bounding filter is missing. To prevent this, developers design appropriate partition filters or incremental variables (like is_incremental()) that force dates checks inside compile clauses.",
+      "If partitioning conditions are not evaluated in dbt's MERGE or update clauses, BigQuery aborts the run because a partition bounding filter is missing. To prevent this, developers design appropriate partition filters or incremental variables (like `is_incremental()`) that force dates checks inside compile clauses.",
       "BigQuery requires incremental tables to possess unique primary keys mapped inside git.",
       "dbt automatically reads target date schemas and converts select strings into partition parameters."
     ],
@@ -1797,7 +1748,7 @@ dbt run --select "tag:hourly path:models/staging"`,
     id: 97,
     category: "Deploy dbt Projects",
     difficulty: "Intermediate",
-    questionText: "An analytics engineer is running a slim deployment task in their continuous integration pipeline. They execute: dbt run --select 'models/staging/*' --exclude 'stg_customers+'. What is the final targeted model selection outcome?",
+    questionText: "An analytics engineer is running a slim deployment task in their continuous integration pipeline. They execute: `dbt run` `--select` 'models/staging/*' --exclude 'stg_customers+'. What is the final targeted model selection outcome?",
     options: [
       "All models in the staging directory are executed, except for stg_customers. Stg_customers is deleted from the target catalog.",
       "All staging directory models compile and execute, with the exception of 'stg_customers' and any downstream dependent consumer models in the pipeline's DAG that rely on 'stg_customers'. The '+' suffix represents the downstream dependency graph traversal.",
@@ -1813,14 +1764,10 @@ dbt run --select "tag:hourly path:models/staging"`,
     id: 98,
     category: "Deploy dbt Projects",
     difficulty: "Intermediate",
-    questionText: "When using the 'dbt clean' command, what configuration controls which files are deleted from the disk filesystem, and what is a destructive gotcha to protect against?",
-    codeSnippet: `clean-targets:
-  - "target"
-  - "dbt_packages"`,
-    codeLanguage: "yaml",
+    questionText: "When using the 'dbt clean' command, what configuration in `dbt_project.yml` controls which files and directories are deleted from the disk filesystem, and what is a destructive gotcha to protect against?",
     options: [
       "The target profiles are cleaned inside the warehouse schemas mapped on profiles.",
-      "The clean-targets parameter in 'dbt_project.yml' defines an array of relative directories that will be permanently deleted from the disk. A dangerous gotcha occurs if a developer adds active folders (such as 'models/') to this list; 'dbt clean' will proceed to delete all model files without prompt.",
+      "The clean-targets parameter in `dbt_project.yml` defines an array of relative directories that will be permanently deleted from the disk. A dangerous gotcha occurs if a developer adds active folders (such as 'models/') to this list; 'dbt clean' will proceed to delete all model files without prompt.",
       "dbt clean removes credentials from git files and must be run prior to committing code.",
       "The clean command removes compilation logs only, and ignores files inside dbt_project."
     ],
@@ -1847,8 +1794,8 @@ models:
     codeLanguage: "yaml",
     options: [
       "Finance group models are encrypted at rest using custom dbt security credentials.",
-      "Grouping models defines collaboration groups. If a model is defined inside a group and labeled as 'access: private', ONLY other models mapped within that EXACT same defined group can reference it via the ref() function inside our dbt compiler. Downstream models in other groups will fail to compile if they try to call it.",
-      "Grouping models requires a dedicated user profile setup inside profiles.yml targeting the schema.",
+      "Grouping models defines collaboration groups. If a model is defined inside a group and labeled as `access: private`, ONLY other models mapped within that EXACT same defined group can reference it via the ref() function inside our dbt compiler. Downstream models in other groups will fail to compile if they try to call it.",
+      "Grouping models requires a dedicated user profile setup inside `profiles.yml` targeting the schema.",
       "Groups can only be accessed across external projects by declaring them as a source."
     ],
     correctAnswers: [1],
@@ -1891,7 +1838,7 @@ models:
     options: [
       "Freshness parameters require manual timestamps written on profiles configurations.",
       "The configuration requires the exact properties of 'count' (integer) and 'period' (string). The value for period must be a singular string matches dbt identifiers, such as 'hour', 'day', or 'minute'. Passing a plural (like 'hours' or 'days') will cause dbt's YAML schema compilation check to fail.",
-      "freshness limits must be set as global properties inside the main dbt_project.yml file.",
+      "freshness limits must be set as global properties inside the main `dbt_project.yml` file.",
       "The period configuration only supports date offsets registered on the operating system clock."
     ],
     correctAnswers: [1],
@@ -1921,7 +1868,7 @@ models:
     id: 103,
     category: "Deploy dbt Projects",
     difficulty: "Associate",
-    questionText: "A developer checks in multiple profile target connections inside their local profiles.yml configuration file under an active project named 'ecommerce'. If they execute 'dbt run' from their local terminal, how does dbt know which target connection (e.g., 'dev' vs 'prod') to connect with?",
+    questionText: "A developer checks in multiple profile target connections inside their local `profiles.yml` configuration file under an active project named 'ecommerce'. If they execute 'dbt run' from their local terminal, how does dbt know which target connection (e.g., 'dev' vs 'prod') to connect with?",
     codeSnippet: `ecommerce:
   target: dev_john
   outputs:
@@ -1933,12 +1880,12 @@ models:
     codeLanguage: "yaml",
     options: [
       "dbt always defaults to the first output target specified alphabetically in the outputs block.",
-      "dbt defaults to the target connection specified in the 'target' parameter string declared at the root of that active profile block in profiles.yml. This default can be overridden in the CLI using the --target or -t flags.",
+      "dbt defaults to the target connection specified in the 'target' parameter string declared at the root of that active profile block in `profiles.yml`. This default can be overridden in the CLI using the `--target` or -t flags.",
       "dbt runs connection tests against all listed targets and uses whichever database responds fastest.",
       "The connection target is configured inside Git repository secrets and cannot be resolved locally."
     ],
     correctAnswers: [1],
-    explanation: "Within a specific profile defined in profiles.yml, the `target:` property is a string that specifies which target output config inside the `outputs:` block dbt will use by default. This makes sure that commands run in the terminal connect to local development environments unless explicitly instructed to target production via CLI overrides.",
+    explanation: "Within a specific profile defined in `profiles.yml`, the `target:` property is a string that specifies which target output config inside the `outputs:` block dbt will use by default. This makes sure that commands run in the terminal connect to local development environments unless explicitly instructed to target production via CLI overrides.",
     references: "https://docs.getdbt.com/docs/core/connect-data-platform/profiles.yml#understanding-profilesyml",
     dbtVersionFocus: "Core Connection Profiles"
   },
@@ -1994,7 +1941,7 @@ models:
       "It forces dbt to bypass the metadata log and read raw schema catalogs instead."
     ],
     correctAnswers: [1],
-    explanation: "CORRECT ACTION:\nThe 'ignore_missing' flag was introduced in dbt Core version 1.11 to make dynamic dev environments cleaner. If set to true, dbt will skip the table gracefully if it is missing from the database, rather than terminating with a database compilation exception.\n\nINCORRECT COMPETING OPTIONS:\n- Opt 1 (generate dummy tables): dbt Core does not have the ability to create mock target schemas or input mock records inside raw ingestion sources on the fly; it only reads metadata.\n- Opt 3 (run entirely offline): Freshness checking by definition requires database engine connections to query metadata (like maximum updated_at fields) or catalog records; check parsing only validates syntax.\n- Opt 4 (bypass metadata log): This option is incorrect because 'ignore_missing' specifically handles table existence in the database catalog, not the query caching paths.",
+    explanation: "CORRECT ACTION:\nThe 'ignore_missing' flag was introduced in dbt Core version 1.11 to make dynamic dev environments cleaner. If set to true, dbt will skip the table gracefully if it is missing from the database, rather than terminating with a database compilation exception.\n\nINCORRECT COMPETING OPTIONS:\n- Opt 1 (generate dummy tables): dbt Core does not have the ability to create mock target schemas or input mock records inside raw ingestion sources on the fly; it only reads metadata.\n- Opt 3 (run entirely offline): Freshness checking by definition requires database engine connections to query metadata (like maximum `updated_at` fields) or catalog records; check parsing only validates syntax.\n- Opt 4 (bypass metadata log): This option is incorrect because 'ignore_missing' specifically handles table existence in the database catalog, not the query caching paths.",
     references: "https://docs.getdbt.com/reference/resource-properties/ignore_missing",
     dbtVersionFocus: "v1.11 (Source Freshness)"
   },
@@ -2002,7 +1949,7 @@ models:
     id: 107,
     category: "Deploy dbt Projects",
     difficulty: "Advanced",
-    questionText: "An engineering team is running a production deploy script in their Snowflake environment. To optimize rebuild durations and storage fees under Slim CI, they execute 'dbt clone --state prod_artifacts'. What is the functional mechanism of the 'dbt clone' command?",
+    questionText: "An engineering team is running a production deploy script in their Snowflake environment. To optimize rebuild durations and storage fees under Slim CI, they execute 'dbt clone `--state` prod_artifacts'. What is the functional mechanism of the 'dbt clone' command?",
     codeSnippet: `dbt clone --state prod_artifacts --select tag:daily`,
     codeLanguage: "bash",
     options: [
@@ -2020,24 +1967,22 @@ models:
     id: 108,
     category: "Develop Models",
     difficulty: "Advanced",
-    questionText: "You are implementing the newly introduced 'microbatch' incremental strategy in dbt Core v1.11 to process clickstream event volumes in batches. Which configuration blocks are legally mandatory for a model utilizing this strategy?",
+    questionText: "You are implementing the newly introduced 'microbatch' incremental strategy in dbt Core v1.11 to process clickstream event volumes in batches. Which configuration parameters are legally mandatory for a model utilizing this strategy?",
     codeSnippet: `models:
   - name: fct_web_logs
     config:
       materialized: incremental
       incremental_strategy: microbatch
-      event_time: click_timestamp
-      begin: '2026-01-01'
-      batch_size: day`,
+      # Which mandatory microbatch properties must be declared here?`,
     codeLanguage: "yaml",
     options: [
-      "Only materialized and unique_key parameters are required; microbatch handles date splits automatically.",
+      "Only materialized and `unique_key` parameters are required; microbatch handles date splits automatically.",
       "A model using the 'microbatch' strategy must define: 1) materialized: incremental; 2) incremental_strategy: microbatch; 3) an active 'event_time' pointing to a database column containing timestamps; 4) a static start string defined as 'begin'; and 5) a supported interval string designated as 'batch_size'. Failing to provide any of these causes a parser configuration error.",
-      "Microbatch options only require setting partition filters inside profiles.yml configuration logs.",
+      "Microbatch options only require setting partition filters inside `profiles.yml` configuration logs.",
       "Only the model file name need be specified, as long as the underlying table has an index."
     ],
     correctAnswers: [1],
-    explanation: "CORRECT ACTION:\nUnder dbt v1.11+, a microbatch incremental build splits history into dynamic datetime windows and executes them as separate cycles. The microbatch strategy is strict: it requires setting the materialized type to incremental, the strategy to microbatch, defining 'event_time' (the datetime field), 'begin' (the starting threshold), and 'batch_size' (the granularity of slices).\n\nINCORRECT COMPETING OPTIONS:\n- Opt 1 (only materialized and unique_key): The unique_key cannot replace microbatch parameters, and event_time, begin, and batch_size are mandatory configurations under the dbt YAML schema compiler.\n- Opt 3 (configured inside profiles.yml): profiles.yml only handles database connection attributes (host, credentials, threads, schema). It does not configure model-level incremental mechanics.\n- Opt 4 (only needs an indexed table): dbt is database-agnostic and does not infer structural constraints from raw indexes; explicit metadata parameters must be supplied in standard YAML blocks.",
+    explanation: "CORRECT ACTION:\nUnder dbt v1.11+, a microbatch incremental build splits history into dynamic datetime windows and executes them as separate cycles. The microbatch strategy is strict: it requires setting the materialized type to incremental, the strategy to microbatch, defining 'event_time' (the datetime field), 'begin' (the starting threshold), and 'batch_size' (the granularity of slices).\n\nINCORRECT COMPETING OPTIONS:\n- Opt 1 (only materialized and `unique_key`): The `unique_key` cannot replace microbatch parameters, and event_time, begin, and batch_size are mandatory configurations under the dbt YAML schema compiler.\n- Opt 3 (configured inside `profiles.yml`): `profiles.yml` only handles database connection attributes (host, credentials, threads, schema). It does not configure model-level incremental mechanics.\n- Opt 4 (only needs an indexed table): dbt is database-agnostic and does not infer structural constraints from raw indexes; explicit metadata parameters must be supplied in standard YAML blocks.",
     references: "https://docs.getdbt.com/docs/build/microbatch",
     dbtVersionFocus: "v1.11 (Microbatch Incremental)"
   },
@@ -2045,7 +1990,7 @@ models:
     id: 109,
     category: "Develop Models",
     difficulty: "Advanced",
-    questionText: "An analytics team installs an external utility package, but they want to override the behavior of a specific default macro from that package. How can they configure macro resolution order using the 'dispatch' config block inside dbt_project.yml?",
+    questionText: "An analytics team installs an external utility package, but they want to override the behavior of a specific default macro from that package. How can they configure macro resolution order using the 'dispatch' config block inside `dbt_project.yml`?",
     codeSnippet: `dispatch:
   - macro_namespace: dbt_utils
     search_order: ['my_project', 'dbt_utils']`,
@@ -2065,7 +2010,7 @@ models:
     id: 110,
     category: "Deploy dbt Projects",
     difficulty: "Advanced",
-    questionText: "Your continuous integration (Slim CI) flow runs the command: dbt run --select state:modified+ --defer --state prod_state. If an untouched downstream model 'fct_revenue' depends on a modified staging model, how does dbt resolve the reference for fct_revenue?",
+    questionText: "Your continuous integration (Slim CI) flow runs the command: `dbt run` `--select` state:modified+ `--defer` `--state` prod_state. If an untouched downstream model 'fct_revenue' depends on a modified staging model, how does dbt resolve the reference for fct_revenue?",
     options: [
       "The execution fails because fct_revenue is excluded from execution paths.",
       "dbt compiles fct_revenue to query the production database namespace (e.g. 'prod_database.prod_schema.fct_revenue') as defined in the prod_state manifest, deferring to valid production tables instead of rebuilding them in the dev schema.",
@@ -2088,12 +2033,12 @@ models:
     codeLanguage: "jinja",
     options: [
       "dbt ignores custom schema names altogether when compiling inside developer systems.",
-      "By default, if a custom schema is specified in dev, dbt appends the custom schema name to the target schema defined in profiles.yml (yields target_schema_custom_schema). In production, dbt uses the custom schema as-is (discarding the target profile prefix) to keep physical separation rules.",
+      "By default, if a custom schema is specified in dev, dbt appends the custom schema name to the target schema defined in `profiles.yml` (yields target_schema_custom_schema). In production, dbt uses the custom schema as-is (discarding the target profile prefix) to keep physical separation rules.",
       "An exception is raised if custom schemas overlap with warehouse cluster specifications.",
       "Custom schemas must match the profile connection target name exactly."
     ],
     correctAnswers: [1],
-    explanation: "CORRECT ACTION:\nThis is a standard dbt macro behavior gotcha. To prevent multiple developers from colliding or overwriting each other's custom schemas, dbt's default behavior for custom schemas combines the user's default schema from profiles.yml with the model's custom schema (e.g. `analytics_dev_mart`). In production, it drops the prefix, building directly in the custom schema (e.g. `mart`).\n\nINCORRECT COMPETING OPTIONS:\n- Opt 1 (ignores custom schemas): dbt actively parses and compiles custom schemas in dev, though it applies prefixing to avoid multi-user conflicts.\n- Opt 3 (exception on overlap): dbt compiles custom schemas dynamically without raising conflicts, regardless of database or warehouse configurations.\n- Opt 4 (must match target connection name): The schema name is isolated and does not need to align with connection configurations or targets.",
+    explanation: "CORRECT ACTION:\nThis is a standard dbt macro behavior gotcha. To prevent multiple developers from colliding or overwriting each other's custom schemas, dbt's default behavior for custom schemas combines the user's default schema from `profiles.yml` with the model's custom schema (e.g. `analytics_dev_mart`). In production, it drops the prefix, building directly in the custom schema (e.g. `mart`).\n\nINCORRECT COMPETING OPTIONS:\n- Opt 1 (ignores custom schemas): dbt actively parses and compiles custom schemas in dev, though it applies prefixing to avoid multi-user conflicts.\n- Opt 3 (exception on overlap): dbt compiles custom schemas dynamically without raising conflicts, regardless of database or warehouse configurations.\n- Opt 4 (must match target connection name): The schema name is isolated and does not need to align with connection configurations or targets.",
     references: "https://docs.getdbt.com/docs/build/custom-schemas",
     dbtVersionFocus: "Core Schema Macro Customization"
   },
@@ -2108,7 +2053,7 @@ models:
     codeLanguage: "yaml",
     options: [
       "The check strategy yields faster executions because it ignores warehouse indexes.",
-      "The 'timestamp' strategy is highly efficient as it checks a single column (e.g., updated_at) to discover modified records. The 'check' strategy (especially with 'check_cols: all') compares every listed column across millions of rows, requiring expensive database hash computations and slow runtimes.",
+      "The 'timestamp' strategy is highly efficient as it checks a single column (e.g., `updated_at`) to discover modified records. The 'check' strategy (especially with 'check_cols: all') compares every listed column across millions of rows, requiring expensive database hash computations and slow runtimes.",
       "The timestamp strategy is destructive and deletes records from the snapshot metadata table.",
       "The check strategy is limited to processing less than three source rows per transaction."
     ],
@@ -2121,12 +2066,16 @@ models:
     id: 113,
     category: "Develop Models",
     difficulty: "Advanced",
-    questionText: "Under the dbt Semantic Layer (MetricFlow standards), if you want to define a metric that references or aggregates two pre-existing customer metrics, how should this relationship be styled inside the metrics yml file?",
+    questionText: "Under the dbt Semantic Layer (MetricFlow standards), you have two pre-existing simple metrics declared below. You want to define a new derived metric `average_revenue_per_user` that divides `revenue` by `active_users`. Which configuration structure inside your schema YAML correctly defines this derived metric?",
     codeSnippet: `metrics:
-  - name: average_revenue_per_user
-    type: expression
+  - name: revenue
+    type: simple
     type_params:
-      expression: "revenue / active_users"`,
+      measure: total_revenue
+  - name: active_users
+    type: simple
+    type_params:
+      measure: user_count`,
     codeLanguage: "yaml",
     options: [
       "You must specify 'type: raw' and write standard PostgreSQL subqueries in the configuration profile.",
@@ -2183,7 +2132,7 @@ models:
     id: 116,
     category: "Debug Data Models",
     difficulty: "Advanced",
-    questionText: "You configure 'query-comment' properties inside dbt_project.yml to identify expensive warehouse run origins. What context information is available to the query-comment Jinja compiler, and what is a performance pitfall to avoid?",
+    questionText: "You configure 'query-comment' properties inside `dbt_project.yml` to identify expensive warehouse run origins. What context information is available to the query-comment Jinja compiler, and what is a performance pitfall to avoid?",
     codeSnippet: `query-comment:
   comment: "Compiled by user: {{ target.user }} | model: {{ model.name }}"
   append: true`,
@@ -2203,20 +2152,21 @@ models:
     id: 117,
     category: "Deploy dbt Projects",
     difficulty: "Intermediate",
-    questionText: "To defend profiles.yml against committing hardcoded passwords or database tokens into security repositories, what is the best practice for establishing safe credential management, and how is it parsed?",
+    questionText: "To defend `profiles.yml` against committing hardcoded passwords or database tokens into security repositories, what is the best practice for establishing safe credential management, and how is it parsed?",
     codeSnippet: `outputs:
   dev:
     type: postgres
-    password: "{{ env_var('DBT_ENV_PASSWORD') }}"`,
+    user: analyst
+    password: # How should sensitive credentials be securely supplied here?`,
     codeLanguage: "yaml",
     options: [
-      "Passwords can only be stored as plain-text inside profiles.yml; dbt cannot parse environmental parameters.",
+      "Passwords can only be stored as plain-text inside `profiles.yml`; dbt cannot parse environmental parameters.",
       "The env_var() Jinja function allows credential rotation. DBT queries system environment values directly at compilation, ensuring security profiles contain no raw values and can be safely committed to source control systems.",
-      "All credentials must be stored within dbt_project.yml configuration schemas.",
+      "All credentials must be stored within `dbt_project.yml` configuration schemas.",
       "The env_var function creates static configuration files that must be deleted after each compile task."
     ],
     correctAnswers: [1],
-    explanation: "CORRECT ACTION:\nThe `env_var()` compiler function allows accessing environment variables inside configurations like profiles.yml. This pattern defends against raw credentials checking, making continuous integration credential pipelines highly secure and simple.\n\nINCORRECT COMPETING OPTIONS:\n- Opt 1 (only stored as plain-text): dbt native Jinja engines explicitly support loading env variables inside configuration files like profiles.yml.\n- Opt 3 (stored within dbt_project.yml): Coordinates and secrets belong exclusively in system files like profiles.yml, not in models configurations or project files.\n- Opt 4 (creates static config files): values are processed dynamically on the fly within server or shell environments, and no temp physical files are created or deleted.",
+    explanation: "CORRECT ACTION:\nThe `env_var()` compiler function allows accessing environment variables inside configurations like `profiles.yml`. This pattern defends against raw credentials checking, making continuous integration credential pipelines highly secure and simple.\n\nINCORRECT COMPETING OPTIONS:\n- Opt 1 (only stored as plain-text): dbt native Jinja engines explicitly support loading env variables inside configuration files like `profiles.yml`.\n- Opt 3 (stored within `dbt_project.yml`): Coordinates and secrets belong exclusively in system files like `profiles.yml`, not in models configurations or project files.\n- Opt 4 (creates static config files): values are processed dynamically on the fly within server or shell environments, and no temp physical files are created or deleted.",
     references: "https://docs.getdbt.com/reference/dbt-jinja-functions/env_var",
     dbtVersionFocus: "Core Profiles & Variables Security"
   },
@@ -2245,7 +2195,7 @@ models:
       "Threads are restricted purely by Snowflake physical credit limits.",
       "The '--threads' flag dictates concurrently processed DAG nodes. If set higher than the number of parallel connections supported by the database engine (or higher than local machine capacity), queries queue in the warehouse, adding connection overhead and making execution slower.",
       "High thread counts can corrupt underlying compiled SQL logic.",
-      "Thread configuration is static and can only be set inside dbt_project.yml."
+      "Thread configuration is static and can only be set inside `dbt_project.yml`."
     ],
     correctAnswers: [1],
     explanation: "CORRECT ACTION:\nThe thread parameter regulates horizontal DAG compilation. While processing multiple independent nodes concurrently speeds up runs, setting high thread counts beyond database queue limits or thread pool parameters results in thread lock delays, metadata waiting times, and slower overall runs.\n\nINCORRECT COMPETING OPTIONS:\n- Opt 1 (restricted by Snowflake limits): Thread limits are managed by dbt's Python execution engine and connection pool configurations, not backend compute models.\n- Opt 3 (corrupts SQL logic): Concurrent compilation writes standard target SQL scripts cleanly and is functionally thread-safe; concurrency does not affect logic.\n- Opt 4 (thread config is static): Threads can be modified dynamically on the command line utilizing the `--threads` or `-t` options.",

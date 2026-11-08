@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useRef } from "react";
+import React, { useState, useEffect, useMemo, useRef } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import {
   BookOpen,
@@ -18,41 +18,188 @@ import {
   Settings,
   ListFilter,
   Check,
-  AlertCircle
+  AlertCircle,
+  Maximize2,
+  Minimize2,
+  ExternalLink,
+  ChevronLeft,
+  PanelLeftClose,
+  PanelLeftOpen
 } from "lucide-react";
 import { Question, ExamMode, ExamSession } from "./types";
 import { examQuestions } from "./questions";
 import DbtMeshVisualizer from "./components/DbtMeshVisualizer";
+import FormattedText, { FormattedExplanation } from "./components/FormattedText";
+
+/** Fisher-Yates shuffle; returns a new array. */
+function shuffle<T>(items: T[]): T[] {
+  const result = [...items];
+  for (let i = result.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [result[i], result[j]] = [result[j], result[i]];
+  }
+  return result;
+}
+
+/** Shuffles a question's options and remaps correctAnswers to the new positions. */
+function shuffleOptions(question: Question): Question {
+  const order = shuffle(question.options.map((_, i) => i));
+  return {
+    ...question,
+    options: order.map((i) => question.options[i]),
+    correctAnswers: question.correctAnswers.map((c) => order.indexOf(c)),
+  };
+}
+
+type Screen = "WELCOME" | "EXAM" | "RESULT";
+
+const MODE_LABELS: Record<ExamMode, string> = {
+  MOCK_EXAM: "Full Mock Exam",
+  QUICK_QUIZ: "Quick Practice Quiz",
+  DOMAIN_PRACTICE: "Domain Targeted",
+};
+
+const slugify = (value: string) => value.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
+
+/** URL hash for a screen: #/, #/results, #/exam/<mode>[/<domain>]. */
+function hashFor(screen: Screen, session: ExamSession | null): string {
+  if (screen === "RESULT") return "#/results";
+  if (screen === "EXAM" && session) {
+    const domain = session.targetDomain ? `/${slugify(session.targetDomain)}` : "";
+    return `#/exam/${slugify(session.mode)}${domain}`;
+  }
+  return "#/";
+}
+
+function screenForHash(hash: string): Screen {
+  if (hash.startsWith("#/exam")) return "EXAM";
+  if (hash.startsWith("#/results")) return "RESULT";
+  return "WELCOME";
+}
+
+const LEAVE_SESSION_PROMPT = "Leave this session without submitting? Your answers will not be scored.";
 
 export default function App() {
   // Screens state
-  const [screen, setScreen] = useState<"WELCOME" | "EXAM" | "RESULT">("WELCOME");
+  const [screen, setScreen] = useState<Screen>("WELCOME");
 
   // Active Session
   const [session, setSession] = useState<ExamSession | null>(null);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [sidebarFilter, setSidebarFilter] = useState<"ALL" | "FLAGGED" | "UNANSWERED">("ALL");
 
+  // Sidebar visibility & drag resize state
+  const [isSidebarOpen, setIsSidebarOpen] = useState<boolean>(true);
+  const [sidebarWidth, setSidebarWidth] = useState<number>(288);
+  const isDraggingSidebarRef = useRef<boolean>(false);
+
   // Global settings
   const [isPracticeMode, setIsPracticeMode] = useState<boolean>(true); // Practice mode allows checking answers instantly
   const [activeTab, setActiveTab] = useState<"overview" | "develop" | "debug" | "test" | "deploy">("overview");
   const [isPaused, setIsPaused] = useState(false);
   const [userCheckedCurrent, setUserCheckedCurrent] = useState(false); // In practice mode, has user checked answer on current Q?
+  const [isFullscreen, setIsFullscreen] = useState(false);
+
+  // Sync fullscreen state with browser events
+  useEffect(() => {
+    const handleFsChange = () => {
+      setIsFullscreen(!!document.fullscreenElement);
+    };
+    document.addEventListener("fullscreenchange", handleFsChange);
+    return () => document.removeEventListener("fullscreenchange", handleFsChange);
+  }, []);
+
+  const toggleFullscreen = async () => {
+    try {
+      if (!document.fullscreenElement) {
+        if (document.documentElement.requestFullscreen) {
+          await document.documentElement.requestFullscreen();
+        }
+      } else {
+        if (document.exitFullscreen) {
+          await document.exitFullscreen();
+        }
+      }
+    } catch (err) {
+      console.warn("Fullscreen request error:", err);
+    }
+  };
+
+  // Handle dragging sidebar to resize or collapse
+  useEffect(() => {
+    const handleMouseMove = (e: MouseEvent) => {
+      if (!isDraggingSidebarRef.current) return;
+      const newWidth = e.clientX;
+      if (newWidth < 140) {
+        setIsSidebarOpen(false);
+      } else {
+        setIsSidebarOpen(true);
+        setSidebarWidth(Math.min(500, Math.max(200, newWidth)));
+      }
+    };
+
+    const handleMouseUp = () => {
+      if (isDraggingSidebarRef.current) {
+        isDraggingSidebarRef.current = false;
+        document.body.style.userSelect = "";
+        document.body.style.cursor = "";
+      }
+    };
+
+    const handleTouchMove = (e: TouchEvent) => {
+      if (!isDraggingSidebarRef.current || !e.touches[0]) return;
+      const newWidth = e.touches[0].clientX;
+      if (newWidth < 140) {
+        setIsSidebarOpen(false);
+      } else {
+        setIsSidebarOpen(true);
+        setSidebarWidth(Math.min(500, Math.max(200, newWidth)));
+      }
+    };
+
+    const handleTouchEnd = () => {
+      if (isDraggingSidebarRef.current) {
+        isDraggingSidebarRef.current = false;
+        document.body.style.userSelect = "";
+        document.body.style.cursor = "";
+      }
+    };
+
+    window.addEventListener("mousemove", handleMouseMove);
+    window.addEventListener("mouseup", handleMouseUp);
+    window.addEventListener("touchmove", handleTouchMove);
+    window.addEventListener("touchend", handleTouchEnd);
+
+    return () => {
+      window.removeEventListener("mousemove", handleMouseMove);
+      window.removeEventListener("mouseup", handleMouseUp);
+      window.removeEventListener("touchmove", handleTouchMove);
+      window.removeEventListener("touchend", handleTouchEnd);
+    };
+  }, []);
+
+  const startDraggingSidebar = (e: React.MouseEvent | React.TouchEvent) => {
+    e.preventDefault();
+    isDraggingSidebarRef.current = true;
+    document.body.style.userSelect = "none";
+    document.body.style.cursor = "col-resize";
+  };
 
   // Active Timer state (represented as elapsed / remaining seconds)
   const [timeLeft, setTimeLeft] = useState<number>(0);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
-    if (session && !session.completed && !isPaused) {
+    // Only run timer for full MOCK_EXAM mode
+    if (session && session.mode === "MOCK_EXAM" && !session.completed && !isPaused) {
       timerRef.current = setInterval(() => {
         setTimeLeft((prev) => {
-          if (session.mode === "MOCK_EXAM" && prev <= 1) {
+          if (prev <= 1) {
             clearInterval(timerRef.current!);
             handleAutoSubmit();
             return 0;
           }
-          return session.mode === "MOCK_EXAM" ? prev - 1 : prev + 1;
+          return prev - 1;
         });
       }, 1000);
     } else {
@@ -65,6 +212,55 @@ export default function App() {
   }, [session, isPaused]);
 
   // Format seconds to HH:MM:SS format
+  /** Switches screen and records it in the URL so browser back/forward work. */
+  const goTo = (next: Screen, sessionForHash: ExamSession | null = session) => {
+    setScreen(next);
+    const hash = hashFor(next, sessionForHash);
+    if (window.location.hash !== hash) window.history.pushState(null, "", hash);
+  };
+
+  /** Abandons an unsubmitted session and returns to the dashboard. */
+  const exitSession = () => {
+    setSession(null);
+    setIsPaused(false);
+    goTo("WELCOME", null);
+  };
+
+  // Sessions are not persisted, so a reload always starts on the dashboard.
+  useEffect(() => {
+    if (window.location.hash !== "#/") window.history.replaceState(null, "", "#/");
+  }, []);
+
+  // Browser back/forward: confirm before abandoning an active session.
+  useEffect(() => {
+    const onPopState = () => {
+      const target = screenForHash(window.location.hash);
+      const inActiveSession = screen === "EXAM" && session && !session.completed;
+
+      if (inActiveSession && target !== "EXAM") {
+        if (confirm(LEAVE_SESSION_PROMPT)) {
+          exitSession();
+        } else {
+          window.history.pushState(null, "", hashFor("EXAM", session));
+        }
+        return;
+      }
+
+      const reachable =
+        target === "WELCOME" ||
+        (target === "EXAM" && session && !session.completed) ||
+        (target === "RESULT" && session?.completed);
+      if (reachable) {
+        setScreen(target);
+      } else {
+        window.history.replaceState(null, "", "#/");
+        setScreen("WELCOME");
+      }
+    };
+    window.addEventListener("popstate", onPopState);
+    return () => window.removeEventListener("popstate", onPopState);
+  }, [screen, session]);
+
   const formatTime = (seconds: number) => {
     const h = Math.floor(seconds / 3600);
     const m = Math.floor((seconds % 3600) / 60);
@@ -114,13 +310,11 @@ export default function App() {
 
     if (mode === "MOCK_EXAM") {
       // Shuffled complete database of 100+ pro-grade certification questions for maximum comprehensiveness. No sampling or cutting.
-      selectedQuestionsList = [...examQuestions].sort(() => Math.random() - 0.5);
+      selectedQuestionsList = shuffle(examQuestions);
       setTimeLeft(120 * 60); // 120 minutes (7,200 seconds) countdown
     } else if (mode === "QUICK_QUIZ") {
       // 10 randomized items
-      selectedQuestionsList = [...examQuestions]
-        .sort(() => Math.random() - 0.5)
-        .slice(0, 10);
+      selectedQuestionsList = shuffle(examQuestions).slice(0, 10);
       setTimeLeft(0); // For practice, counts UP
     } else if (mode === "DOMAIN_PRACTICE" && domainFilter) {
       // Filter questions matching category
@@ -136,7 +330,7 @@ export default function App() {
       targetDomain: domainFilter,
       startTime: Date.now(),
       timeSpent: 0,
-      questions: selectedQuestionsList,
+      questions: selectedQuestionsList.map(shuffleOptions),
       userAnswers: {},
       flaggedQuestions: [],
       completed: false
@@ -146,7 +340,7 @@ export default function App() {
     setCurrentQuestionIndex(0);
     setUserCheckedCurrent(false);
     setIsPaused(false);
-    setScreen("EXAM");
+    goTo("EXAM", newSession);
   };
 
   // Active question getters
@@ -244,7 +438,7 @@ export default function App() {
     const timeEllapsed =
       session.mode === "MOCK_EXAM"
         ? 120 * 60 - timeLeft
-        : timeLeft;
+        : 0;
 
     const finalSessionObj = {
       ...session,
@@ -255,7 +449,7 @@ export default function App() {
     };
 
     setSession(finalSessionObj);
-    setScreen("RESULT");
+    goTo("RESULT", finalSessionObj);
   };
 
   // Filter sidebar question list
@@ -274,7 +468,7 @@ export default function App() {
 
 
   return (
-    <div className="flex flex-col min-h-screen bg-[#F9FAFB] font-sans text-[#1A1A1A] select-none">
+    <div className="flex flex-col min-h-screen bg-[#F9FAFB] font-sans text-[#1A1A1A] select-text">
       
       {/* ===================== WELCOME / DASHBOARD SCREEN ===================== */}
       {screen === "WELCOME" && (
@@ -290,10 +484,31 @@ export default function App() {
               <h1 className="text-3xl font-bold tracking-tight text-gray-900 sm:text-4xl">
                 Analytics Engineering Certification Exam Simulator
               </h1>
-              <p className="mt-2 text-md text-gray-600 max-w-3xl">
-                Master the official certified developer curriculum with real-world case simulations. 
-                Fully updated for the crucial syllabus modifications focusing on **dbt Mesh, Semantic Layer, Model Contracts, and v1.11 Unit Testing & Microbatch Incremental Strategy**.
+              <p className="mt-2 text-md text-gray-600 max-w-3xl select-text">
+                <FormattedText text="Master the official certified developer curriculum with real-world case simulations. Fully updated for the crucial syllabus modifications focusing on **dbt Mesh, Semantic Layer, Model Contracts, and v1.11 Unit Testing & Microbatch Incremental Strategy**." />
               </p>
+            </div>
+
+            {/* Quick Full Screen & Standalone Controls */}
+            <div className="flex items-center gap-2.5 self-start md:self-center shrink-0">
+              <button
+                onClick={toggleFullscreen}
+                className="px-3.5 py-2 bg-white border border-gray-300 hover:border-gray-400 hover:bg-gray-50 text-gray-700 rounded-lg text-xs font-semibold flex items-center gap-2 shadow-xs cursor-pointer transition-colors"
+                title={isFullscreen ? "Exit Fullscreen" : "Toggle Fullscreen Kiosk Mode"}
+              >
+                {isFullscreen ? <Minimize2 className="w-3.5 h-3.5" /> : <Maximize2 className="w-3.5 h-3.5" />}
+                <span>{isFullscreen ? "Exit Fullscreen" : "Full Screen"}</span>
+              </button>
+              <a
+                href={typeof window !== "undefined" ? window.location.href : "#"}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="px-3.5 py-2 bg-[#1A1A1A] hover:bg-[#FF694B] text-white rounded-lg text-xs font-semibold flex items-center gap-2 shadow-xs cursor-pointer transition-colors"
+                title="Open standalone app in a separate browser tab"
+              >
+                <ExternalLink className="w-3.5 h-3.5" />
+                <span>Open in Tab</span>
+              </a>
             </div>
           </div>
 
@@ -315,12 +530,17 @@ export default function App() {
                   <div className="flex flex-col justify-between p-5 border border-gray-200 rounded-xl bg-[#FFF5F2]/20 hover:bg-[#FFF5F2]/40 transition-colors duration-200 relative overflow-hidden group">
                     <div className="absolute top-0 right-0 w-24 h-24 bg-[#FF694B]/5 rounded-full translate-x-8 -translate-y-8 group-hover:scale-110 transition-transform duration-300"></div>
                     <div>
-                      <div className="w-10 h-10 bg-[#FF694B] rounded-lg text-white flex items-center justify-center font-bold mb-4">
-                        <Award className="w-5 h-5" />
+                      <div className="flex items-center justify-between mb-4">
+                        <div className="w-10 h-10 bg-[#FF694B] rounded-lg text-white flex items-center justify-center font-bold">
+                          <Award className="w-5 h-5" />
+                        </div>
+                        <span className="px-2 py-0.5 bg-amber-100 text-amber-900 border border-amber-300 text-[10px] font-bold uppercase tracking-wider rounded">
+                          120 Min Timed
+                        </span>
                       </div>
                       <h3 className="font-bold text-gray-900 text-md mb-1">Full Mock Exam</h3>
                       <p className="text-xs text-gray-600 leading-relaxed mb-4">
-                        Comprehensive practice with the complete database of 100+ expert certification questions, shuffled under a proctored 120-minute simulator. No instant answer hints.
+                        Comprehensive simulation with 65+ questions under an authentic 120-minute proctored countdown timer. No instant answer hints during test.
                       </p>
                     </div>
                     <button
@@ -334,12 +554,17 @@ export default function App() {
                   {/* Mode 2 */}
                   <div className="flex flex-col justify-between p-5 border border-gray-200 rounded-xl bg-white hover:border-[#FF694B]/40 transition-all duration-200 relative overflow-hidden group">
                     <div>
-                      <div className="w-10 h-10 bg-[#1A1A1A] rounded-lg text-white flex items-center justify-center font-bold mb-4">
-                        <Sparkles className="w-5 h-5" />
+                      <div className="flex items-center justify-between mb-4">
+                        <div className="w-10 h-10 bg-[#1A1A1A] rounded-lg text-white flex items-center justify-center font-bold">
+                          <Sparkles className="w-5 h-5" />
+                        </div>
+                        <span className="px-2 py-0.5 bg-emerald-50 text-emerald-700 border border-emerald-200 text-[10px] font-bold uppercase tracking-wider rounded">
+                          Untimed
+                        </span>
                       </div>
                       <h3 className="font-bold text-gray-900 text-md mb-1">Quick Practice Quiz</h3>
                       <p className="text-xs text-gray-600 leading-relaxed mb-4">
-                        An accelerated run of 10 random questions with practice overlays enabled, allowing you to reveal explanations as you go.
+                        An accelerated, untimed run of 10 random questions with study overlays enabled. Review inline solution rationale at your own pace.
                       </p>
                     </div>
                     <button
@@ -353,12 +578,17 @@ export default function App() {
                   {/* Mode 3 */}
                   <div className="flex flex-col justify-between p-5 border border-gray-200 rounded-xl bg-white hover:border-[#FF694B]/40 transition-all duration-200 relative overflow-hidden group">
                     <div>
-                      <div className="w-10 h-10 bg-gray-100 rounded-lg text-gray-700 flex items-center justify-center font-bold mb-4">
-                        <Settings className="w-5 h-5" />
+                      <div className="flex items-center justify-between mb-4">
+                        <div className="w-10 h-10 bg-gray-100 rounded-lg text-gray-700 flex items-center justify-center font-bold">
+                          <Settings className="w-5 h-5" />
+                        </div>
+                        <span className="px-2 py-0.5 bg-emerald-50 text-emerald-700 border border-emerald-200 text-[10px] font-bold uppercase tracking-wider rounded">
+                          Untimed
+                        </span>
                       </div>
                       <h3 className="font-bold text-gray-900 text-md mb-1">Domain Targeted</h3>
                       <p className="text-xs text-gray-600 leading-relaxed mb-4">
-                        Zero in on a specific domain. Ideal for tackling weak zones and reinforcing knowledge in any specified domain category.
+                        Zero in on a specific domain without timer constraints. Ideal for tackling weak zones and reinforcing knowledge at your own pace.
                       </p>
                     </div>
                     
@@ -601,40 +831,83 @@ export default function App() {
           
           {/* Top Navigation / Progress Header */}
           <header className="h-16 bg-white border-b border-gray-200 flex items-center justify-between px-6 shrink-0 z-10 shadow-sm">
-            <div className="flex items-center gap-3">
-              <div className="w-8 h-8 bg-[#FF694B] rounded flex items-center justify-center text-white font-black text-sm">dbt</div>
-              <div className="h-6 w-px bg-gray-200"></div>
-              <h1 className="text-xs md:text-sm font-semibold tracking-tight uppercase flex items-center gap-2">
-                Certification Simulator 
-                <span className="text-gray-400 font-normal">
-                  [{session.mode === "MOCK_EXAM" ? "Mock Exam" : isPracticeMode ? "Practice Mode" : "Practicing Run"}]
-                </span>
-              </h1>
+            <div className="flex items-center gap-2.5 sm:gap-3">
+              <div className="w-8 h-8 bg-[#FF694B] rounded flex items-center justify-center text-white font-black text-sm shrink-0">dbt</div>
+              <div className="h-6 w-px bg-gray-200 shrink-0"></div>
+
+              {/* Sidebar toggle button in header */}
+              <button
+                onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+                className={`px-2.5 py-1.5 rounded-lg text-xs font-medium border flex items-center gap-1.5 cursor-pointer transition-colors ${
+                  isSidebarOpen
+                    ? "bg-gray-100 hover:bg-gray-200 border-gray-200 text-gray-700"
+                    : "bg-[#FFF5F2] hover:bg-[#FFEAE4] border-[#FF694B]/30 text-[#FF694B] font-semibold shadow-xs"
+                }`}
+                title={isSidebarOpen ? "Hide question sidebar" : "Show question sidebar"}
+              >
+                {isSidebarOpen ? <PanelLeftClose className="w-4 h-4" /> : <PanelLeftOpen className="w-4 h-4" />}
+                <span className="hidden sm:inline">{isSidebarOpen ? "Hide Sidebar" : "Show Questions"}</span>
+              </button>
+
+              <div className="hidden sm:block h-6 w-px bg-gray-200 shrink-0"></div>
+              <nav aria-label="Breadcrumb" className="text-xs md:text-sm flex items-center gap-1.5 min-w-0">
+                <button
+                  onClick={() => {
+                    if (confirm(LEAVE_SESSION_PROMPT)) exitSession();
+                  }}
+                  className="text-gray-500 hover:text-[#FF694B] font-medium cursor-pointer transition-colors"
+                >
+                  Dashboard
+                </button>
+                <ChevronRight className="w-3.5 h-3.5 text-gray-300 shrink-0" />
+                <h1 className="font-semibold text-gray-900 truncate" aria-current="page">
+                  {MODE_LABELS[session.mode]}
+                  {session.targetDomain && <span className="hidden md:inline text-gray-500 font-normal">: {session.targetDomain}</span>}
+                </h1>
+              </nav>
             </div>
 
-            <div className="flex items-center gap-4 md:gap-8">
-              {/* Timer metrics */}
-              <div className="flex items-center gap-2.5">
-                <div className="flex flex-col items-end">
-                  <span className="text-[9px] text-gray-500 uppercase font-bold tracking-widest leading-none mb-1">
-                    {session.mode === "MOCK_EXAM" ? "Time Remaining" : "Time Spent"}
-                  </span>
-                  <span className={`text-sm md:text-lg font-mono font-medium leading-none ${
-                    session.mode === "MOCK_EXAM" && timeLeft < 300 ? "text-red-600 animate-pulse font-bold" : "text-gray-950"
-                  }`}>
-                    {formatTime(timeLeft)}
-                  </span>
+            <div className="flex items-center gap-3 md:gap-5">
+              {/* Timer metrics - ONLY for Full Mock Exam */}
+              {session.mode === "MOCK_EXAM" ? (
+                <div className="flex items-center gap-2.5">
+                  <div className="flex flex-col items-end">
+                    <span className="text-[9px] text-gray-500 uppercase font-bold tracking-widest leading-none mb-1">
+                      Time Remaining
+                    </span>
+                    <span
+                      className={`text-sm md:text-lg font-mono font-medium leading-none ${
+                        timeLeft < 300 ? "text-red-600 animate-pulse font-bold" : "text-gray-950"
+                      }`}
+                    >
+                      {formatTime(timeLeft)}
+                    </span>
+                  </div>
                 </div>
-                {session.mode !== "MOCK_EXAM" && (
-                  <button
-                    onClick={() => setIsPaused(!isPaused)}
-                    className="p-1.5 border border-gray-300 rounded hover:bg-gray-50 text-gray-600 cursor-pointer transition-colors"
-                    title={isPaused ? "Resume Session" : "Pause Session"}
-                  >
-                    {isPaused ? <Play className="w-4 h-4" /> : <Pause className="w-4 h-4" />}
-                  </button>
-                )}
-              </div>
+              ) : (
+                <div className="flex items-center gap-1.5 px-3 py-1 bg-emerald-50 text-emerald-700 border border-emerald-200/80 rounded-full text-xs font-semibold">
+                  <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
+                  <span>Untimed Practice</span>
+                </div>
+              )}
+
+              {/* Fullscreen toggle button */}
+              <button
+                onClick={toggleFullscreen}
+                className="p-1.5 border border-gray-300 rounded hover:bg-gray-50 text-gray-600 cursor-pointer transition-colors"
+                title={isFullscreen ? "Exit Fullscreen" : "Fullscreen Proctored Mode"}
+              >
+                {isFullscreen ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
+              </button>
+
+              <button
+                onClick={() => {
+                  if (confirm(LEAVE_SESSION_PROMPT)) exitSession();
+                }}
+                className="px-4 py-1.5 border border-gray-300 hover:bg-gray-50 text-gray-700 rounded text-xs font-semibold uppercase tracking-wider transition-colors cursor-pointer"
+              >
+                Exit
+              </button>
 
               {/* Submit button directly inside header for rapid end */}
               <button
@@ -654,25 +927,37 @@ export default function App() {
           <div className="flex-1 flex overflow-hidden relative">
             
             {/* Sidebar with Grid selector */}
-            <aside className="hidden md:flex w-72 bg-white border-r border-gray-200 flex-col shrink-0">
-              
-              {/* Progress Tracking Widget */}
-              <div className="p-4 border-b border-gray-100 bg-gray-50/50">
-                <div className="flex justify-between text-[11px] font-bold uppercase text-gray-500 mb-2">
-                  <span>Your Progress</span>
-                  <span>
-                    {Object.keys(session.userAnswers).length} of {session.questions.length} Questions
-                  </span>
+            {isSidebarOpen && (
+              <aside
+                style={{ width: `${sidebarWidth}px` }}
+                className="hidden md:flex bg-white border-r border-gray-200 flex-col shrink-0 relative select-none"
+              >
+                {/* Progress Tracking Widget with Collapse icon */}
+                <div className="p-4 border-b border-gray-100 bg-gray-50/50 flex items-center justify-between gap-3">
+                  <div className="flex-1">
+                    <div className="flex justify-between text-[11px] font-bold uppercase text-gray-500 mb-2">
+                      <span>Your Progress</span>
+                      <span>
+                        {Object.keys(session.userAnswers).length} of {session.questions.length} Questions
+                      </span>
+                    </div>
+                    <div className="w-full bg-gray-200 h-1.5 rounded-full overflow-hidden">
+                      <div
+                        className="bg-[#FF694B] h-1.5 rounded-full transition-all duration-300"
+                        style={{
+                          width: `${(Object.keys(session.userAnswers).length / session.questions.length) * 100}%`
+                        }}
+                      ></div>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => setIsSidebarOpen(false)}
+                    className="p-1.5 rounded-md hover:bg-gray-200 text-gray-400 hover:text-gray-700 transition-colors cursor-pointer shrink-0"
+                    title="Hide sidebar (Click to hide, or drag border to collapse)"
+                  >
+                    <PanelLeftClose className="w-4 h-4" />
+                  </button>
                 </div>
-                <div className="w-full bg-gray-200 h-1.5 rounded-full overflow-hidden">
-                  <div
-                    className="bg-[#FF694B] h-1.5 rounded-full transition-all duration-300"
-                    style={{
-                      width: `${(Object.keys(session.userAnswers).length / session.questions.length) * 100}%`
-                    }}
-                  ></div>
-                </div>
-              </div>
 
               {/* Sidebar filter options */}
               <div className="p-3 border-b border-gray-100 bg-white flex items-center justify-between gap-1.5 shrink-0">
@@ -756,14 +1041,63 @@ export default function App() {
                 </div>
               </div>
             </aside>
+          )}
+
+            {/* Divider Handle: Drag to resize or collapse, Click chevron to hide */}
+            {isSidebarOpen ? (
+              <div
+                onMouseDown={startDraggingSidebar}
+                onTouchStart={startDraggingSidebar}
+                className="hidden md:flex relative w-2 hover:w-2.5 bg-gray-100 hover:bg-[#FF694B]/20 transition-all cursor-col-resize z-20 items-center justify-center select-none group shrink-0"
+                title="Drag to resize or collapse sidebar, or click chevron to hide"
+              >
+                <div className="w-0.5 h-10 bg-gray-300 group-hover:bg-[#FF694B] rounded-full transition-colors"></div>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setIsSidebarOpen(false);
+                  }}
+                  className="absolute left-1/2 -translate-x-1/2 w-4 h-11 bg-white border border-gray-300 hover:border-[#FF694B] hover:text-[#FF694B] text-gray-400 hover:bg-[#FFF5F2] rounded-r-md flex items-center justify-center shadow-xs cursor-pointer transition-all group-hover:scale-105"
+                  title="Hide sidebar (Click or drag left to collapse)"
+                >
+                  <ChevronLeft className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            ) : (
+              /* When Collapsed: Drag-to-expand strip & Floating Questions badge */
+              <>
+                <div
+                  onMouseDown={startDraggingSidebar}
+                  onTouchStart={startDraggingSidebar}
+                  className="hidden md:flex w-2.5 hover:w-3.5 bg-gray-100 hover:bg-[#FF694B]/30 border-r border-gray-200 transition-all cursor-col-resize z-20 select-none items-center justify-center group shrink-0"
+                  title="Drag right to expand sidebar"
+                >
+                  <div className="w-0.5 h-10 bg-gray-300 group-hover:bg-[#FF694B] rounded-full transition-colors"></div>
+                </div>
+
+                <div className="absolute top-4 left-4 z-30 hidden md:block">
+                  <button
+                    onClick={() => {
+                      setIsSidebarOpen(true);
+                      if (sidebarWidth < 200) setSidebarWidth(288);
+                    }}
+                    className="px-3 py-1.5 bg-white border border-gray-300 hover:border-[#FF694B] hover:text-[#FF694B] text-gray-700 rounded-lg text-xs font-semibold flex items-center gap-2 shadow-md cursor-pointer transition-all hover:scale-102"
+                    title="Show question sidebar"
+                  >
+                    <PanelLeftOpen className="w-4 h-4 text-[#FF694B]" />
+                    <span>Questions ({Object.keys(session.userAnswers).length}/{session.questions.length})</span>
+                  </button>
+                </div>
+              </>
+            )}
 
             {/* Content Area for active question */}
             <section className="flex-1 bg-white flex flex-col overflow-hidden relative">
               <div className="flex-1 overflow-y-auto p-6 md:p-10 pb-32">
                 <div className="max-w-3xl mx-auto w-full">
                   
-                  {/* Category and Difficulty Indicators Row */}
-                  <div className="flex items-center justify-between gap-4 mb-6">
+                  {/* Category, Difficulty, and Pre-Answer Docs Reference Link */}
+                  <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
                     <div className="flex flex-wrap items-center gap-2">
                       <span className={`px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider rounded-lg border ${getCategoryColorStyles(currentQuestion.category)}`}>
                         {currentQuestion.category}
@@ -771,6 +1105,21 @@ export default function App() {
                       <span className="px-2 py-1 bg-gray-100 text-[10px] font-bold uppercase tracking-wider rounded text-gray-600">
                         {currentQuestion.difficulty}
                       </span>
+
+                      {/* Official dbt Documentation Reference Link - Always accessible before answering */}
+                      {currentQuestion.references && (
+                        <a
+                          href={currentQuestion.references}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-1.5 px-2.5 py-1 text-[11px] font-semibold rounded-lg bg-[#FFF5F2] hover:bg-[#FFEAE4] text-[#FF694B] border border-[#FF694B]/30 hover:border-[#FF694B] transition-all hover:shadow-xs group cursor-pointer"
+                          title="Open official dbt documentation topic for this question in a new tab"
+                        >
+                          <BookOpen className="w-3.5 h-3.5 text-[#FF694B]" />
+                          <span>Official dbt Docs</span>
+                          <ExternalLink className="w-3 h-3 text-[#FF694B]/70 group-hover:translate-x-0.5 transition-transform" />
+                        </a>
+                      )}
                     </div>
 
                     <div className="text-right">
@@ -781,8 +1130,8 @@ export default function App() {
                   </div>
 
                   {/* Question Text */}
-                  <h2 className="text-md md:text-lg font-medium leading-relaxed text-gray-900 mb-6">
-                    {currentQuestion.questionText}
+                  <h2 className="text-md md:text-lg font-medium leading-relaxed text-gray-900 mb-6 select-text">
+                    <FormattedText text={currentQuestion.questionText} />
                   </h2>
 
                   {/* Code snippet panel */}
@@ -791,7 +1140,7 @@ export default function App() {
                       <div className="absolute top-3 right-3 text-[10px] font-bold uppercase tracking-widest text-gray-600 group-hover:text-gray-400 transition-colors uppercase">
                         {currentQuestion.codeLanguage || "code"}
                       </div>
-                      <pre className="whitespace-pre-wrap">{currentQuestion.codeSnippet}</pre>
+                      <pre className="whitespace-pre-wrap select-text font-mono">{currentQuestion.codeSnippet}</pre>
                     </div>
                   )}
 
@@ -827,10 +1176,10 @@ export default function App() {
                         <div
                           key={opIdx}
                           onClick={() => handleOptionSelect(opIdx)}
-                          className={`flex items-start p-4 border rounded-xl cursor-pointer transition-all duration-200 relative ${optionBorderClass}`}
+                          className={`flex items-start p-4 border rounded-xl cursor-pointer transition-all duration-200 relative select-text ${optionBorderClass}`}
                         >
                           {/* Circle or Check selection element */}
-                          <div className="mt-0.5 shrink-0">
+                          <div className="mt-0.5 shrink-0 select-none">
                             {isMultiSelect ? (
                               <div className={`w-4 h-4 rounded border flex items-center justify-center text-white ${
                                 isSelected ? "bg-[#FF694B] border-[#FF694B]" : "bg-white border-gray-300"
@@ -846,13 +1195,13 @@ export default function App() {
                             )}
                           </div>
 
-                          <div className="ml-4 text-xs md:text-sm text-gray-800 font-medium">
-                            {option}
+                          <div className="ml-4 text-xs md:text-sm text-gray-800 font-medium select-text">
+                            <FormattedText text={option} />
                           </div>
 
                           {/* Instant review indicators */}
                           {userCheckedCurrent && (
-                            <div className="absolute right-4 top-1/2 -translate-y-1/2">
+                            <div className="absolute right-4 top-1/2 -translate-y-1/2 select-none">
                               {isCorrectAnswer ? (
                                 <CheckCircle className="w-5 h-5 text-green-600" />
                               ) : (
@@ -870,24 +1219,40 @@ export default function App() {
                     <div className="mt-8 pt-4 border-t border-gray-100 flex flex-col gap-4">
                       
                       {!userCheckedCurrent ? (
-                        <button
-                          onClick={() => setUserCheckedCurrent(true)}
-                          disabled={!(session.userAnswers[currentQuestion.id] && session.userAnswers[currentQuestion.id].length > 0)}
-                          className={`self-start px-6 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all cursor-pointer ${
-                            session.userAnswers[currentQuestion.id] && session.userAnswers[currentQuestion.id].length > 0
-                              ? "bg-gray-900 border border-gray-900 text-white hover:bg-[#FF694B] hover:border-[#FF694B]"
-                              : "bg-gray-100 border border-gray-200 text-gray-400 cursor-not-allowed"
-                          }`}
-                        >
-                          Check Answer Code
-                        </button>
+                        <div className="flex flex-wrap items-center justify-between gap-3">
+                          <button
+                            onClick={() => setUserCheckedCurrent(true)}
+                            disabled={!(session.userAnswers[currentQuestion.id] && session.userAnswers[currentQuestion.id].length > 0)}
+                            className={`px-6 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all cursor-pointer ${
+                              session.userAnswers[currentQuestion.id] && session.userAnswers[currentQuestion.id].length > 0
+                                ? "bg-gray-900 border border-gray-900 text-white hover:bg-[#FF694B] hover:border-[#FF694B]"
+                                : "bg-gray-100 border border-gray-200 text-gray-400 cursor-not-allowed"
+                            }`}
+                          >
+                            Check Answer
+                          </button>
+
+                          {currentQuestion.references && (
+                            <a
+                              href={currentQuestion.references}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="inline-flex items-center gap-1.5 text-xs text-gray-500 hover:text-[#FF694B] font-medium transition-colors cursor-pointer group"
+                              title="Open official dbt documentation on this topic in a new tab"
+                            >
+                              <BookOpen className="w-3.5 h-3.5 text-[#FF694B]" />
+                              <span>Need a hint? Read the official dbt topic documentation</span>
+                              <ExternalLink className="w-3 h-3 text-gray-400 group-hover:text-[#FF694B] group-hover:translate-x-0.5 transition-all" />
+                            </a>
+                          )}
+                        </div>
                       ) : (
                         <motion.div
                           initial={{ opacity: 0, y: 10 }}
                           animate={{ opacity: 1, y: 0 }}
-                          className="bg-gray-50 border border-gray-200 rounded-xl p-5 text-xs md:text-sm leading-relaxed"
+                          className="bg-gray-50 border border-gray-200 rounded-xl p-5 text-xs md:text-sm leading-relaxed select-text"
                         >
-                          <div className="flex items-center gap-2 mb-3">
+                          <div className="flex items-center gap-2 mb-3 select-none">
                             <span className="p-1 px-2.5 bg-gray-900 text-white font-bold rounded uppercase tracking-wider text-[10px]">
                               Solution Analysis
                             </span>
@@ -898,9 +1263,7 @@ export default function App() {
                             )}
                           </div>
                           
-                          <p className="text-gray-800 font-medium whitespace-pre-line mb-3">
-                            {currentQuestion.explanation}
-                          </p>
+                          <FormattedExplanation explanation={currentQuestion.explanation} className="mb-3" />
                           
                           {currentQuestion.references && (
                             <a
@@ -1013,8 +1376,29 @@ export default function App() {
 
       {/* ===================== SCORE REPORT / RESULTS SCREEN ===================== */}
       {screen === "RESULT" && session && (
-        <div className="flex-1 w-full max-w-4xl mx-auto px-4 py-8 md:py-12 flex flex-col gap-10">
+        <div className="flex-1 w-full max-w-4xl mx-auto px-4 py-8 md:py-12 flex flex-col gap-8">
           
+          {/* Top Navigation & Fullscreen Toolbar */}
+          <div className="flex items-center justify-between pb-4 border-b border-gray-200">
+            <button
+              onClick={() => goTo("WELCOME")}
+              className="px-4 py-2 bg-white border border-gray-300 hover:border-gray-400 text-gray-700 rounded-lg text-xs font-bold uppercase tracking-wider flex items-center gap-2 cursor-pointer transition-colors shadow-xs"
+            >
+              <RotateCcw className="w-3.5 h-3.5" /> Back to Dashboard
+            </button>
+
+            <div className="flex items-center gap-2">
+              <button
+                onClick={toggleFullscreen}
+                className="px-3.5 py-2 bg-white border border-gray-300 hover:border-gray-400 text-gray-700 rounded-lg text-xs font-semibold flex items-center gap-2 cursor-pointer transition-colors shadow-xs"
+                title={isFullscreen ? "Exit Fullscreen" : "Toggle Fullscreen Kiosk Mode"}
+              >
+                {isFullscreen ? <Minimize2 className="w-3.5 h-3.5" /> : <Maximize2 className="w-3.5 h-3.5" />}
+                <span>{isFullscreen ? "Exit Fullscreen" : "Full Screen"}</span>
+              </button>
+            </div>
+          </div>
+
           {/* Header Status Result */}
           <div className="bg-white rounded-2xl border border-gray-200 p-8 shadow-sm flex flex-col md:flex-row items-center gap-8 justify-between relative overflow-hidden">
             
@@ -1164,7 +1548,7 @@ export default function App() {
               {/* Action Buttons footer */}
               <div className="flex flex-col sm:flex-row gap-4 mt-8 pt-6 border-t border-gray-100">
                 <button
-                  onClick={() => setScreen("WELCOME")}
+                  onClick={() => goTo("WELCOME")}
                   className="flex-1 py-3 bg-[#1A1A1A] hover:bg-[#FF694B] text-white text-xs font-bold uppercase tracking-wider rounded-xl transition-colors cursor-pointer flex items-center justify-center gap-2"
                 >
                   <RotateCcw className="w-4 h-4" /> Back to Dashboard
@@ -1257,12 +1641,12 @@ export default function App() {
                     </div>
 
                     {/* Question text */}
-                    <p className="text-xs md:text-sm font-medium text-gray-800 leading-relaxed mb-4">
-                      {q.questionText}
+                    <p className="text-xs md:text-sm font-medium text-gray-800 leading-relaxed mb-4 select-text">
+                      <FormattedText text={q.questionText} />
                     </p>
 
                     {/* Display alternatives */}
-                    <div className="space-y-1.5 pl-6 mb-4">
+                    <div className="space-y-1.5 pl-6 mb-4 select-text">
                       {q.options.map((opt, opIdx) => {
                         const wasChosen = answers.includes(opIdx);
                         const pointsCorrect = correct.includes(opIdx);
@@ -1279,17 +1663,18 @@ export default function App() {
                         }
 
                         return (
-                          <div key={opIdx} className={styleClass}>
-                            {prefix} {opt}
+                          <div key={opIdx} className={`${styleClass} select-text`}>
+                            <span className="font-mono mr-1 select-none">{prefix}</span>
+                            <FormattedText text={opt} />
                           </div>
                         );
                       })}
                     </div>
 
                     {/* Display analysis block */}
-                    <div className="p-4 bg-gray-50 border border-gray-100 rounded-lg text-xs leading-relaxed text-gray-600">
-                      <p className="font-bold text-gray-900 mb-1">Explanation:</p>
-                      <p className="text-gray-700 mb-2">{q.explanation}</p>
+                    <div className="p-4 bg-gray-50 border border-gray-100 rounded-lg text-xs leading-relaxed text-gray-600 select-text">
+                      <p className="font-bold text-gray-900 mb-2 select-none">Explanation:</p>
+                      <FormattedExplanation explanation={q.explanation} className="mb-2" />
                       {q.references && (
                         <a
                           href={q.references}
