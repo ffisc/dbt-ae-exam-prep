@@ -30,6 +30,15 @@ import { Question, ExamMode, ExamSession } from "./types";
 import { examQuestions } from "./questions";
 import DbtMeshVisualizer from "./components/DbtMeshVisualizer";
 import FormattedText, { FormattedExplanation } from "./components/FormattedText";
+import {
+  AnswerHistory,
+  isAnswerCorrect,
+  loadHistory,
+  pickPracticeQuestions,
+  recordResults,
+  saveHistory,
+  statusOf,
+} from "./answerHistory";
 
 /** Fisher-Yates shuffle; returns a new array. */
 function shuffle<T>(items: T[]): T[] {
@@ -304,25 +313,53 @@ export default function App() {
     }
   };
 
+  // Graded-answer history across sessions; drives which questions practice modes pick.
+  const [answerHistory, setAnswerHistory] = useState<AnswerHistory>(() => loadHistory());
+  // Question ids already recorded in the current session, so submitting does not record them twice.
+  const recordedInSessionRef = useRef<Set<number>>(new Set());
+
+  const recordGraded = (results: { questionId: number; correct: boolean }[]) => {
+    if (results.length === 0) return;
+    results.forEach((r) => recordedInSessionRef.current.add(r.questionId));
+    setAnswerHistory((prev) => {
+      const next = recordResults(prev, results);
+      saveHistory(next);
+      return next;
+    });
+  };
+
+  const progressCounts = useMemo(() => {
+    const counts = { correct: 0, wrong: 0, unseen: 0 };
+    examQuestions.forEach((q) => counts[statusOf(answerHistory, q.id)]++);
+    return counts;
+  }, [answerHistory]);
+
+  const resetAnswerHistory = () => {
+    if (!confirm("Clear your answer history? Practice quizzes will treat every question as unseen.")) return;
+    saveHistory({});
+    setAnswerHistory({});
+  };
+
   // Session Constructors
   const startNewSession = (mode: ExamMode, domainFilter?: string) => {
     let selectedQuestionsList: Question[] = [];
 
     if (mode === "MOCK_EXAM") {
-      // Shuffled complete database of 100+ pro-grade certification questions for maximum comprehensiveness. No sampling or cutting.
+      // The full bank, shuffled, as in the real exam.
       selectedQuestionsList = shuffle(examQuestions);
       setTimeLeft(120 * 60); // 120 minutes (7,200 seconds) countdown
     } else if (mode === "QUICK_QUIZ") {
-      // 10 randomized items
-      selectedQuestionsList = shuffle(examQuestions).slice(0, 10);
+      selectedQuestionsList = pickPracticeQuestions(examQuestions, answerHistory, shuffle, 10);
       setTimeLeft(0); // For practice, counts UP
     } else if (mode === "DOMAIN_PRACTICE" && domainFilter) {
-      // Filter questions matching category
-      selectedQuestionsList = examQuestions.filter(
-        (q) => q.category === domainFilter
+      selectedQuestionsList = pickPracticeQuestions(
+        examQuestions.filter((q) => q.category === domainFilter),
+        answerHistory,
+        shuffle
       );
       setTimeLeft(0); // Count UP
     }
+    recordedInSessionRef.current = new Set();
 
     const newSession: ExamSession = {
       id: Math.random().toString(36).substring(2, 9),
@@ -380,6 +417,15 @@ export default function App() {
     });
   };
 
+  // Practice mode: reveal the answer to the current question and record the result.
+  const checkCurrentAnswer = () => {
+    if (!session || !currentQuestion) return;
+    setUserCheckedCurrent(true);
+    if (recordedInSessionRef.current.has(currentQuestion.id)) return;
+    const answers = session.userAnswers[currentQuestion.id] || [];
+    recordGraded([{ questionId: currentQuestion.id, correct: isAnswerCorrect(currentQuestion, answers) }]);
+  };
+
   // Flag toggle
   const toggleFlagCurrent = () => {
     if (!session || !currentQuestion) return;
@@ -410,10 +456,10 @@ export default function App() {
 
     let correctCount = 0;
     const categoryScores: { [category: string]: { correct: number; total: number } } = {};
+    const newlyGraded: { questionId: number; correct: boolean }[] = [];
 
     session.questions.forEach((q) => {
       const answers = session.userAnswers[q.id] || [];
-      const correct = q.correctAnswers;
 
       // Initialize domain stats
       if (!categoryScores[q.category]) {
@@ -421,16 +467,18 @@ export default function App() {
       }
       categoryScores[q.category].total += 1;
 
-      // Check if answers match correct answers perfectly
-      const isCorrect =
-        answers.length === correct.length &&
-        answers.every((value) => correct.includes(value));
-
+      const isCorrect = isAnswerCorrect(q, answers);
       if (isCorrect) {
         correctCount += 1;
         categoryScores[q.category].correct += 1;
       }
+
+      // Unanswered questions stay unseen in the history.
+      if (answers.length > 0 && !recordedInSessionRef.current.has(q.id)) {
+        newlyGraded.push({ questionId: q.id, correct: isCorrect });
+      }
     });
+    recordGraded(newlyGraded);
 
     const scorePercentage = Math.round((correctCount / session.questions.length) * 100);
     const hasPassed = scorePercentage >= 65; // standard dbt exam passing grade is 65%
@@ -524,6 +572,33 @@ export default function App() {
                   Launch a New Practice Session
                 </h2>
 
+                {/* Answer history summary */}
+                <div className="mb-6 p-4 bg-gray-50 rounded-xl border border-gray-100 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                  <div className="flex flex-wrap items-center gap-x-5 gap-y-2 text-xs">
+                    <span className="font-bold text-gray-900">Your progress</span>
+                    <span className="flex items-center gap-1.5 text-gray-700">
+                      <span className="w-2 h-2 rounded-full bg-green-600"></span>
+                      {progressCounts.correct} answered correctly
+                    </span>
+                    <span className="flex items-center gap-1.5 text-gray-700">
+                      <span className="w-2 h-2 rounded-full bg-red-500"></span>
+                      {progressCounts.wrong} to review
+                    </span>
+                    <span className="flex items-center gap-1.5 text-gray-700">
+                      <span className="w-2 h-2 rounded-full bg-gray-300"></span>
+                      {progressCounts.unseen} not answered yet
+                    </span>
+                  </div>
+                  {progressCounts.unseen < examQuestions.length && (
+                    <button
+                      onClick={resetAnswerHistory}
+                      className="text-[11px] font-semibold text-gray-500 hover:text-red-600 cursor-pointer transition-colors self-start sm:self-auto"
+                    >
+                      Reset progress
+                    </button>
+                  )}
+                </div>
+
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
                   
                   {/* Mode 1 */}
@@ -564,7 +639,7 @@ export default function App() {
                       </div>
                       <h3 className="font-bold text-gray-900 text-md mb-1">Quick Practice Quiz</h3>
                       <p className="text-xs text-gray-600 leading-relaxed mb-4">
-                        An accelerated, untimed run of 10 random questions with study overlays enabled. Review inline solution rationale at your own pace.
+                        10 untimed questions with study overlays, drawn from questions you have not answered yet or got wrong last time.
                       </p>
                     </div>
                     <button
@@ -588,7 +663,7 @@ export default function App() {
                       </div>
                       <h3 className="font-bold text-gray-900 text-md mb-1">Domain Targeted</h3>
                       <p className="text-xs text-gray-600 leading-relaxed mb-4">
-                        Zero in on a specific domain without timer constraints. Ideal for tackling weak zones and reinforcing knowledge at your own pace.
+                        One exam domain, untimed. Covers the domain's questions you have not answered yet or got wrong last time.
                       </p>
                     </div>
                     
@@ -1221,7 +1296,7 @@ export default function App() {
                       {!userCheckedCurrent ? (
                         <div className="flex flex-wrap items-center justify-between gap-3">
                           <button
-                            onClick={() => setUserCheckedCurrent(true)}
+                            onClick={checkCurrentAnswer}
                             disabled={!(session.userAnswers[currentQuestion.id] && session.userAnswers[currentQuestion.id].length > 0)}
                             className={`px-6 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all cursor-pointer ${
                               session.userAnswers[currentQuestion.id] && session.userAnswers[currentQuestion.id].length > 0
