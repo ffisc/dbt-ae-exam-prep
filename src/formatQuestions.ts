@@ -5,7 +5,7 @@ export const formatQuestions: Question[] = [
   {
     "id": 2001,
     "format": "fill_blank",
-    "category": "Develop Models",
+    "category": "Developing and optimizing dbt models",
     "difficulty": "Intermediate",
     "questionText": "An incremental model must load only rows newer than the latest `event_time` already stored in the model's own table. The filter must apply on incremental runs and be skipped on the first run. Complete the model.",
     "codeSnippet": "{{ config(materialized='incremental') }}\n\nselect * from {{ ref('stg_events') }}\n\n{% if [[1]]() %}\nwhere event_time >= (select max(event_time) from {{ [[2]] }})\n{% endif %}",
@@ -29,7 +29,7 @@ export const formatQuestions: Question[] = [
   {
     "id": 2002,
     "format": "fill_blank",
-    "category": "Develop Models",
+    "category": "Developing and optimizing dbt models",
     "difficulty": "Intermediate",
     "questionText": "An upstream team adds a column to the source of an incremental model and removes a different column. The existing table in the warehouse must gain the new column and lose the removed one on the next run, without a full refresh. Which value completes the model properties?",
     "codeSnippet": "models:\n  - name: fct_events\n    config:\n      materialized: incremental\n      on_schema_change: [[1]]",
@@ -48,7 +48,7 @@ export const formatQuestions: Question[] = [
   {
     "id": 2003,
     "format": "fill_blank",
-    "category": "Develop Models",
+    "category": "Managing dbt models governance",
     "difficulty": "Advanced",
     "questionText": "The `dim_customers` model is published in two numbered releases, 1 and 2, and an unpinned `ref('dim_customers')` resolves to 2. A downstream model must keep reading 1 until its owners migrate. Which keyword argument completes the `ref` call?",
     "codeSnippet": "select * from {{ ref('dim_customers', [[1]]=1) }}",
@@ -68,7 +68,7 @@ export const formatQuestions: Question[] = [
   {
     "id": 2004,
     "format": "fill_blank",
-    "category": "Develop Models",
+    "category": "Developing and optimizing dbt models",
     "difficulty": "Basic",
     "questionText": "The SQL logic of the incremental model `fct_orders` changed, and all historical rows must be reprocessed with the new logic. dbt must drop the existing table and rebuild it from scratch. Which flag completes the command?",
     "codeSnippet": "dbt run [[1]] --select fct_orders",
@@ -88,7 +88,7 @@ export const formatQuestions: Question[] = [
   {
     "id": 2005,
     "format": "fill_blank",
-    "category": "Debug Data Models",
+    "category": "Developing and optimizing dbt models",
     "difficulty": "Intermediate",
     "questionText": "You want to see the first 20 rows that the query of `stg_orders` returns. dbt must compile the model, run the query against the warehouse and print the rows in the terminal without creating or replacing any relation. Which subcommand completes the command?",
     "codeSnippet": "dbt [[1]] --select stg_orders --limit 20",
@@ -107,7 +107,7 @@ export const formatQuestions: Question[] = [
   {
     "id": 2006,
     "format": "fill_blank",
-    "category": "Debug Data Models",
+    "category": "Debugging data modeling errors",
     "difficulty": "Intermediate",
     "questionText": "A macro computes `n`, the number of rows in a relation. While debugging, you need the message below to appear both in the terminal and in the log file. By default, `log` writes only to the log file. Which argument completes the call?",
     "codeSnippet": "{{ log('Row count: ' ~ n, [[1]]=true) }}",
@@ -126,7 +126,7 @@ export const formatQuestions: Question[] = [
   {
     "id": 2007,
     "format": "fill_blank",
-    "category": "Debug Data Models",
+    "category": "Developing and optimizing dbt models",
     "difficulty": "Advanced",
     "questionText": "You changed the SQL of several models and want to confirm that they build and that their dependencies resolve in the target warehouse. dbt must still execute the model SQL, but it must avoid expensive reads of the input data by limiting every ref and source to zero rows. Which flag completes the command?",
     "codeSnippet": "dbt run [[1]]",
@@ -145,7 +145,7 @@ export const formatQuestions: Question[] = [
   {
     "id": 2008,
     "format": "fill_blank",
-    "category": "Test and Document Models",
+    "category": "Implementing dbt tests",
     "difficulty": "Basic",
     "questionText": "In dbt 1.10.5 or later, the parameters of a generic test sit under one key inside the test entry. Complete the test so every non-null `customer_id` in `orders` must match an `id` in `customers`.",
     "codeSnippet": "models:\n  - name: orders\n    columns:\n      - name: customer_id\n        data_tests:\n          - relationships:\n              [[1]]:\n                to: ref('customers')\n                [[2]]: id",
@@ -169,7 +169,7 @@ export const formatQuestions: Question[] = [
   {
     "id": 2009,
     "format": "fill_blank",
-    "category": "Test and Document Models",
+    "category": "Implementing dbt tests",
     "difficulty": "Intermediate",
     "questionText": "You are writing a unit test for `fct_orders`. The first blank is the key that lists the mocked input rows for each model the test reads. The second blank is the key that declares the output rows the model must produce. Complete the YAML.",
     "codeSnippet": "unit_tests:\n  - name: test_order_total\n    model: fct_orders\n    [[1]]:\n      - input: ref('stg_orders')\n        rows:\n          - {order_id: 1, amount: 10}\n    [[2]]:\n      rows:\n        - {order_id: 1, total: 10}",
@@ -193,7 +193,7 @@ export const formatQuestions: Question[] = [
   {
     "id": 2010,
     "format": "fill_blank",
-    "category": "Test and Document Models",
+    "category": "Developing and optimizing dbt models",
     "difficulty": "Basic",
     "questionText": "A docs block named `order_status` is declared with `{% docs order_status %}` in a Markdown file in the project. Which Jinja function completes the column description so that the block text is used in the generated documentation?",
     "codeSnippet": "models:\n  - name: orders\n    columns:\n      - name: status\n        description: \"{{ [[1]]('order_status') }}\"",
@@ -212,7 +212,7 @@ export const formatQuestions: Question[] = [
   {
     "id": 2011,
     "format": "fill_blank",
-    "category": "Deploy dbt Projects",
+    "category": "Leveraging the dbt state",
     "difficulty": "Advanced",
     "questionText": "A CI job must build only the models that differ from the production manifest, plus their downstream models. Unselected upstream models are not built in the CI schema, so their refs must resolve to the production relations. The job sets an environment variable that points dbt at the production manifest in `prod-run-artifacts`. Complete the command.",
     "codeSnippet": "dbt build --select [[1]]:modified+ [[2]]",
@@ -236,7 +236,7 @@ export const formatQuestions: Question[] = [
   {
     "id": 2012,
     "format": "fill_blank",
-    "category": "Deploy dbt Projects",
+    "category": "Developing and optimizing dbt models",
     "difficulty": "Basic",
     "questionText": "A project's `profiles.yml` defines two connections, `dev` and `prod`. dbt must use `dev` when a command does not choose a connection, and the production job chooses `prod` with a command-line flag. Complete the two keys in the profile below.",
     "codeSnippet": "my_project:\n  [[1]]: dev\n  [[2]]:\n    dev:\n      type: snowflake\n    prod:\n      type: snowflake",
@@ -260,7 +260,7 @@ export const formatQuestions: Question[] = [
   {
     "id": 3001,
     "format": "matching",
-    "category": "Develop Models",
+    "category": "Developing and optimizing dbt models",
     "difficulty": "Basic",
     "questionText": "You are choosing materializations for the models in a new project. Match each materialization to what dbt does when the model runs.",
     "prompts": [
@@ -289,7 +289,7 @@ export const formatQuestions: Question[] = [
   {
     "id": 3002,
     "format": "matching",
-    "category": "Develop Models",
+    "category": "Developing and optimizing dbt models",
     "difficulty": "Intermediate",
     "questionText": "An analytics engineer is evaluating incremental strategies for different models. Match each `incremental_strategy` to how it writes data to the target table.",
     "prompts": [
@@ -320,7 +320,7 @@ export const formatQuestions: Question[] = [
   {
     "id": 3003,
     "format": "matching",
-    "category": "Develop Models",
+    "category": "Developing and optimizing dbt models",
     "difficulty": "Intermediate",
     "questionText": "Match each node selector to the nodes it selects.",
     "prompts": [
@@ -352,7 +352,7 @@ export const formatQuestions: Question[] = [
   {
     "id": 3004,
     "format": "matching",
-    "category": "Develop Models",
+    "category": "Developing and optimizing dbt models",
     "difficulty": "Basic",
     "questionText": "Match each Jinja function or variable available in model SQL to what it resolves to.",
     "prompts": [
@@ -384,7 +384,7 @@ export const formatQuestions: Question[] = [
   {
     "id": 3005,
     "format": "matching",
-    "category": "Debug Data Models",
+    "category": "Debugging data modeling errors",
     "difficulty": "Intermediate",
     "questionText": "While debugging a failed deployment job you inspect the artifacts that dbt wrote to `target/`. Match each artifact to the information it holds.",
     "prompts": [
@@ -413,7 +413,7 @@ export const formatQuestions: Question[] = [
   {
     "id": 3006,
     "format": "matching",
-    "category": "Debug Data Models",
+    "category": "Debugging data modeling errors",
     "difficulty": "Intermediate",
     "questionText": "You are troubleshooting a project that no longer runs as expected. Match each command to its effect.",
     "prompts": [
@@ -445,7 +445,7 @@ export const formatQuestions: Question[] = [
   {
     "id": 3007,
     "format": "matching",
-    "category": "Debug Data Models",
+    "category": "Debugging data modeling errors",
     "difficulty": "Intermediate",
     "questionText": "A team needs to investigate failures in a long-running `dbt build`. Match each command-line flag to its effect.",
     "prompts": [
@@ -477,7 +477,7 @@ export const formatQuestions: Question[] = [
   {
     "id": 3008,
     "format": "matching",
-    "category": "Test and Document Models",
+    "category": "Implementing dbt tests",
     "difficulty": "Basic",
     "questionText": "Match each built-in generic test to the condition that makes it fail.",
     "prompts": [
@@ -506,7 +506,7 @@ export const formatQuestions: Question[] = [
   {
     "id": 3009,
     "format": "matching",
-    "category": "Test and Document Models",
+    "category": "Implementing dbt tests",
     "difficulty": "Advanced",
     "questionText": "A team wants to tune a data test on a large table so that it reports warnings and errors sensibly. Match each test config to what it controls.",
     "prompts": [
@@ -538,7 +538,7 @@ export const formatQuestions: Question[] = [
   {
     "id": 3010,
     "format": "matching",
-    "category": "Test and Document Models",
+    "category": "Developing and optimizing dbt models",
     "difficulty": "Intermediate",
     "questionText": "A project is adding documentation to its models. Match each documentation feature to what it does.",
     "prompts": [
@@ -567,7 +567,7 @@ export const formatQuestions: Question[] = [
   {
     "id": 3011,
     "format": "matching",
-    "category": "Deploy dbt Projects",
+    "category": "Leveraging the dbt state",
     "difficulty": "Advanced",
     "questionText": "A CI job selects nodes with `state:` and `result:` selectors, which compare against artifacts from a previous invocation passed with `--state`, as well as with other selector methods. Match each selector to the nodes it selects.",
     "prompts": [
@@ -599,7 +599,7 @@ export const formatQuestions: Question[] = [
   {
     "id": 3012,
     "format": "matching",
-    "category": "Deploy dbt Projects",
+    "category": "Troubleshooting and optimizing dbt pipelines",
     "difficulty": "Intermediate",
     "questionText": "You are building steps for a production deployment job. Match each dbt command to its effect.",
     "prompts": [
@@ -631,7 +631,7 @@ export const formatQuestions: Question[] = [
   {
     "id": 4001,
     "format": "build_list",
-    "category": "Develop Models",
+    "category": "Developing and optimizing dbt models",
     "difficulty": "Basic",
     "questionText": "The `materialized` config for the model `stg_orders` is set in several places. Order these settings from highest to lowest precedence.",
     "items": [
@@ -650,7 +650,7 @@ export const formatQuestions: Question[] = [
   {
     "id": 4002,
     "format": "build_list",
-    "category": "Develop Models",
+    "category": "Developing and optimizing dbt models",
     "difficulty": "Basic",
     "questionText": "You need to bring a raw `orders` table in the `shop` schema into your project with a staging model, and check it after it is built. Order the steps from first to last.",
     "items": [
@@ -668,7 +668,7 @@ export const formatQuestions: Question[] = [
   {
     "id": 4003,
     "format": "build_list",
-    "category": "Develop Models",
+    "category": "Managing dbt models governance",
     "difficulty": "Advanced",
     "questionText": "The `finance` project owns `monthly_revenue`. The `marketing` project needs to select from it using a cross-project `ref`. Order the steps from first to last.",
     "items": [
@@ -686,7 +686,7 @@ export const formatQuestions: Question[] = [
   {
     "id": 4004,
     "format": "build_list",
-    "category": "Develop Models",
+    "category": "Developing and optimizing dbt models",
     "difficulty": "Intermediate",
     "questionText": "You track changes to the `orders` source with a snapshot named `orders_snapshot`. Order the events from first to last so that a later change to a source row is recorded as a new version, with the previous version closed.",
     "items": [
@@ -699,14 +699,14 @@ export const formatQuestions: Question[] = [
     "distractors": [
       "Run `dbt snapshot --full-refresh` to drop and recreate the snapshot table"
     ],
-    "explanation": "CORRECT ACTION:\nThe snapshot is defined first. The first `dbt snapshot` creates the table from the query result with `dbt_valid_from` and `dbt_valid_to`. After a source row changes, the next `dbt snapshot` closes the old record by setting `dbt_valid_to` and inserts the new version.\n\nCOMMON MISTAKES:\n- Running `dbt snapshot --full-refresh`: a snapshot ignores `--full-refresh` and keeps its history, so the table is not dropped.\n- Running `dbt snapshot` before the source row changes: dbt finds no change to record, so no new version is inserted.\n- Treating the change as visible before the second run: the snapshot table only updates when `dbt snapshot` runs.",
+    "explanation": "CORRECT ACTION:\nThe snapshot is defined first. The first `dbt snapshot` creates the table from the query result with `dbt_valid_from` and `dbt_valid_to`. After a source row changes, the next `dbt snapshot` closes the old record by setting `dbt_valid_to` and inserts the new version.\n\nCOMMON MISTAKES:\n- Running `dbt snapshot --full-refresh`: `dbt snapshot` has no `--full-refresh` option, so the command fails, and `dbt build --full-refresh` leaves snapshot tables and their history as they are.\n- Running `dbt snapshot` before the source row changes: dbt finds no change to record, so no new version is inserted.\n- Treating the change as visible before the second run: the snapshot table only updates when `dbt snapshot` runs.",
     "references": "https://docs.getdbt.com/docs/build/snapshots",
     "dbtVersionFocus": "v1.9+ (YAML snapshots)"
   },
   {
     "id": 4005,
     "format": "build_list",
-    "category": "Test and Document Models",
+    "category": "Implementing dbt tests",
     "difficulty": "Intermediate",
     "questionText": "The model `dim_customers` has a unit test and a `not_null` data test, and `fct_orders` depends on it. During `dbt build`, order what happens from first to last.",
     "items": [
@@ -725,7 +725,7 @@ export const formatQuestions: Question[] = [
   {
     "id": 4006,
     "format": "build_list",
-    "category": "Test and Document Models",
+    "category": "Implementing dbt tests",
     "difficulty": "Advanced",
     "questionText": "You run `dbt test --store-failures` and the `unique` test on `orders.order_id` finds duplicates. Order what dbt does from first to last.",
     "items": [
@@ -744,7 +744,7 @@ export const formatQuestions: Question[] = [
   {
     "id": 4007,
     "format": "build_list",
-    "category": "Test and Document Models",
+    "category": "Implementing dbt tests",
     "difficulty": "Intermediate",
     "questionText": "You want a reusable generic test named `is_positive` for numeric columns, and the `amount` column of `orders` contains only positive values. Order the steps from first to last.",
     "items": [
@@ -762,7 +762,7 @@ export const formatQuestions: Question[] = [
   {
     "id": 4008,
     "format": "build_list",
-    "category": "Debug Data Models",
+    "category": "Debugging data modeling errors",
     "difficulty": "Basic",
     "questionText": "`dbt run --select customers` stops with a `Database Error` because the warehouse rejected the SQL. Order the debugging steps from first to last, following the process in dbt's guide to debugging errors.",
     "items": [
@@ -782,7 +782,7 @@ export const formatQuestions: Question[] = [
   {
     "id": 4009,
     "format": "build_list",
-    "category": "Debug Data Models",
+    "category": "Troubleshooting and optimizing dbt pipelines",
     "difficulty": "Intermediate",
     "questionText": "In a `dbt build`, `fct_orders` depends on `stg_orders`, and the `not_null` test on `stg_orders.order_id` fails with 23 rows. Order what dbt did, from first to last.",
     "items": [
@@ -801,7 +801,7 @@ export const formatQuestions: Question[] = [
   {
     "id": 4010,
     "format": "build_list",
-    "category": "Debug Data Models",
+    "category": "Debugging data modeling errors",
     "difficulty": "Advanced",
     "questionText": "A macro calls `run_query` and reads `results.columns[0]` without checking `execute`. It fails with `'None' has no attribute 'table'`. Order what dbt does during `dbt run` from first to last.",
     "items": [
@@ -820,7 +820,7 @@ export const formatQuestions: Question[] = [
   {
     "id": 4011,
     "format": "build_list",
-    "category": "Deploy dbt Projects",
+    "category": "Leveraging the dbt state",
     "difficulty": "Advanced",
     "questionText": "You set up a Slim CI job that builds only changed models and defers to production for the rest. Order the steps from first to last.",
     "items": [
@@ -839,7 +839,7 @@ export const formatQuestions: Question[] = [
   {
     "id": 4012,
     "format": "build_list",
-    "category": "Deploy dbt Projects",
+    "category": "Leveraging the dbt state",
     "difficulty": "Basic",
     "questionText": "A developer opens a pull request in a project that has a dbt CI job configured. Order what happens from first to last.",
     "items": [
@@ -859,7 +859,7 @@ export const formatQuestions: Question[] = [
   {
     "id": 5001,
     "format": "hotspot",
-    "category": "Develop Models",
+    "category": "Developing and optimizing dbt models",
     "difficulty": "Basic",
     "questionText": "The incremental model below uses the adapter's default incremental strategy and receives updated versions of orders it has already loaded. Click the line that makes dbt update the existing row for a changed order instead of inserting a duplicate.",
     "codeSnippet": "{{\n    config(\n        materialized='incremental',\n        unique_key='order_id',\n        on_schema_change='fail'\n    )\n}}\n\nselect order_id, customer_id, status, updated_at\nfrom {{ ref('stg_orders') }}\n{% if is_incremental() %}\nwhere updated_at > (select max(updated_at) from {{ this }})\n{% endif %}",
@@ -877,7 +877,7 @@ export const formatQuestions: Question[] = [
   {
     "id": 5002,
     "format": "hotspot",
-    "category": "Develop Models",
+    "category": "Developing and optimizing dbt models",
     "difficulty": "Intermediate",
     "questionText": "In the warehouse, the table that `{{ source('stripe', 'payments') }}` must read is not named `payments`. Click the line that tells dbt the physical table name behind the source table `payments`.",
     "codeSnippet": "sources:\n  - name: stripe\n    database: raw\n    schema: payments_raw\n    tables:\n      - name: payments\n        identifier: payments_v2\n        config:\n          loaded_at_field: _loaded_at\n      - name: refunds",
@@ -895,7 +895,7 @@ export const formatQuestions: Question[] = [
   {
     "id": 5003,
     "format": "hotspot",
-    "category": "Develop Models",
+    "category": "Developing and optimizing dbt models",
     "difficulty": "Intermediate",
     "questionText": "Select every model that `dbt run --select 1+fct_orders` builds.",
     "target": {
@@ -991,7 +991,7 @@ export const formatQuestions: Question[] = [
   {
     "id": 5004,
     "format": "hotspot",
-    "category": "Debug Data Models",
+    "category": "Developing and optimizing dbt models",
     "difficulty": "Basic",
     "questionText": "`dbt run` sometimes builds `dim_customers` before one of the models it selects from, and the run fails because that model does not exist yet. Click the line that causes the wrong build order.",
     "codeSnippet": "{{ config(materialized='table') }}\n\nselect\n    c.customer_id,\n    c.customer_name,\n    count(o.order_id) as order_count\nfrom {{ ref('stg_customers') }} as c\nleft join analytics.stg_orders as o\n    on c.customer_id = o.customer_id\ngroup by 1, 2",
@@ -1009,7 +1009,7 @@ export const formatQuestions: Question[] = [
   {
     "id": 5005,
     "format": "hotspot",
-    "category": "Debug Data Models",
+    "category": "Debugging data modeling errors",
     "difficulty": "Intermediate",
     "questionText": "The first `dbt run` of this new incremental model fails because the target relation does not exist yet. Click the line that causes the error.",
     "codeSnippet": "{{ config(materialized='incremental', unique_key='event_id') }}\n\nselect\n    event_id,\n    user_id,\n    event_type,\n    event_at\nfrom {{ ref('stg_events') }}\nwhere event_at > (select max(event_at) from {{ this }})",
@@ -1027,7 +1027,7 @@ export const formatQuestions: Question[] = [
   {
     "id": 5006,
     "format": "hotspot",
-    "category": "Debug Data Models",
+    "category": "Managing dbt models governance",
     "difficulty": "Advanced",
     "questionText": "The SQL of `dim_customers` returns exactly the four columns listed below, and each declared `data_type` matches the type the SQL returns. `dbt run` fails with an error about the enforced contract on `dim_customers`. Click the line that causes the error.",
     "codeSnippet": "models:\n  - name: dim_customers\n    config:\n      contract:\n        enforced: true\n    columns:\n      - name: customer_id\n        data_type: int\n        constraints:\n          - type: not_null\n      - name: customer_name\n        data_type: string\n      - name: created_at\n        description: When the customer record was created.\n      - name: country_code\n        data_type: string\n        description: ISO 3166-1 alpha-2 country code.",
@@ -1045,7 +1045,7 @@ export const formatQuestions: Question[] = [
   {
     "id": 5007,
     "format": "hotspot",
-    "category": "Debug Data Models",
+    "category": "Troubleshooting and optimizing dbt pipelines",
     "difficulty": "Advanced",
     "questionText": "During `dbt build`, a `unique` test on the model `stg_orders` fails with severity `error`. Select every model that dbt skips.",
     "target": {
@@ -1132,7 +1132,7 @@ export const formatQuestions: Question[] = [
   {
     "id": 5008,
     "format": "hotspot",
-    "category": "Test and Document Models",
+    "category": "Implementing dbt tests",
     "difficulty": "Intermediate",
     "questionText": "Click the line that sets how many failing rows make this `relationships` test report a failure instead of a warning.",
     "codeSnippet": "models:\n  - name: fct_orders\n    columns:\n      - name: customer_id\n        data_tests:\n          - relationships:\n              arguments:\n                to: ref('dim_customers')\n                field: customer_id\n              config:\n                severity: error\n                warn_if: \">0\"\n                error_if: \">10\"",
@@ -1150,7 +1150,7 @@ export const formatQuestions: Question[] = [
   {
     "id": 5009,
     "format": "hotspot",
-    "category": "Test and Document Models",
+    "category": "Developing and optimizing dbt models",
     "difficulty": "Basic",
     "questionText": "Click the line whose description text is written in a Markdown file elsewhere in the project instead of in this YAML file.",
     "codeSnippet": "models:\n  - name: fct_orders\n    description: One row per completed order.\n    columns:\n      - name: order_id\n        description: Primary key of the order, as in **stg_orders**.\n        data_tests:\n          - unique\n      - name: status\n        description: '{{ doc(\"order_status\") }}'\n        data_tests:\n          - accepted_values:\n              arguments:\n                values: ['placed', 'shipped', 'returned']",
@@ -1168,7 +1168,7 @@ export const formatQuestions: Question[] = [
   {
     "id": 5010,
     "format": "hotspot",
-    "category": "Test and Document Models",
+    "category": "Implementing and maintaining external dependencies",
     "difficulty": "Intermediate",
     "questionText": "The exposure `weekly_kpis` depends on the model `fct_revenue`. Select every model that `dbt run --select +exposure:weekly_kpis` builds.",
     "codeSnippet": "exposures:\n  - name: weekly_kpis\n    type: dashboard\n    owner:\n      name: Analytics Team\n    depends_on:\n      - ref('fct_revenue')",
@@ -1262,7 +1262,7 @@ export const formatQuestions: Question[] = [
   {
     "id": 5011,
     "format": "hotspot",
-    "category": "Deploy dbt Projects",
+    "category": "Implementing and maintaining external dependencies",
     "difficulty": "Intermediate",
     "questionText": "The job below runs on a schedule, and `./previous-artifacts` holds the artifacts of the previous run. Click the line that builds only the models downstream of sources that have loaded new data since the previous run.",
     "codeSnippet": "scheduled_build:\n  stage: deploy\n  script:\n    - dbt deps\n    - dbt source freshness\n    - dbt build --select \"state:modified+\" --state ./previous-artifacts\n    - dbt build --select \"source_status:fresher+\" --state ./previous-artifacts\n    - dbt build --select \"result:error+\" --state ./previous-artifacts\n    - dbt build --select \"source:stripe+\"\n  rules:\n    - if: $CI_PIPELINE_SOURCE == \"schedule\"",
@@ -1280,7 +1280,7 @@ export const formatQuestions: Question[] = [
   {
     "id": 5012,
     "format": "hotspot",
-    "category": "Deploy dbt Projects",
+    "category": "Leveraging the dbt state",
     "difficulty": "Advanced",
     "questionText": "In a CI job, only the model `stg_payments` differs from the production manifest. Select every model that `dbt build --select \"state:modified+\" --state ./prod-artifacts` builds.",
     "target": {
@@ -1368,5 +1368,426 @@ export const formatQuestions: Question[] = [
     "explanation": "CORRECT ACTION:\n`state:modified` selects `stg_payments`, the only node that differs from the manifest in `./prod-artifacts`. The `+` adds its descendants, `fct_revenue` and `finance_summary`.\n\nCOMMON MISTAKES:\n- `stg_orders`: it is a parent of `fct_revenue`, and `state:modified+` adds descendants, not ancestors of the descendants. The `@` operator would add it.\n- `stg_customers` and `dim_customers`: they are not modified and are not downstream of `stg_payments`.\n- `source: raw_shop`: it is not modified, and it is upstream of `stg_payments`, so the `+` after the selector does not add it.",
     "references": "https://docs.getdbt.com/reference/node-selection/methods",
     "dbtVersionFocus": "The state selector"
+  },
+  {
+    "id": 2013,
+    "format": "fill_blank",
+    "category": "Managing dbt models governance",
+    "difficulty": "Intermediate",
+    "questionText": "Version 2 of the versioned model `dim_customers` is written in `models/customers_reworked.sql`, and the team does not want to rename that file. Complete the version entry so that dbt builds version 2 from it.",
+    "codeSnippet": "models:\n  - name: dim_customers\n    versions:\n      - v: 1\n      - v: 2\n        [[1]]: customers_reworked",
+    "codeLanguage": "yaml",
+    "blanks": [
+      {
+        "accepted": [
+          "defined_in"
+        ]
+      }
+    ],
+    "explanation": "CORRECT ACTION:\nBy default, dbt expects each version in a file named `<model_name>_v<v>`, and the latest version may also live in the unsuffixed `dim_customers.sql`. `defined_in` overrides that convention with any file name, given without the `.sql` extension.\n\nCOMMON MISTAKES:\n- `alias`: it sets the name of the database relation a version builds, not the file its SQL is read from.\n- Leaving the key out: dbt then looks for `dim_customers_v2.sql` or `dim_customers.sql` and does not use `customers_reworked.sql` for version 2.",
+    "references": "https://docs.getdbt.com/docs/mesh/govern/model-versions",
+    "dbtVersionFocus": "Model versions"
+  },
+  {
+    "id": 3013,
+    "format": "matching",
+    "category": "Managing dbt models governance",
+    "difficulty": "Intermediate",
+    "questionText": "`dim_customers` declares versions 1, 2 and 3, with `latest_version: 2`. The project also has models that are not versioned, such as `stg_orders`. Match each `--select` value to the models it selects.",
+    "prompts": [
+      "`version:latest`",
+      "`version:prerelease`",
+      "`version:old`",
+      "`version:none`",
+      "`dim_customers`"
+    ],
+    "choices": [
+      "Version 1 of `dim_customers`",
+      "Version 2 of `dim_customers`",
+      "Version 3 of `dim_customers`",
+      "All three versions of `dim_customers`",
+      "Only the models that are not versioned, such as `stg_orders`",
+      "Versions 1 and 3 of `dim_customers`"
+    ],
+    "matches": [
+      1,
+      2,
+      0,
+      4,
+      3
+    ],
+    "explanation": "CORRECT ACTION:\nThe `version` method classifies each version against `latest_version`. `version:latest` selects version 2, the one set in `latest_version`. `version:prerelease` selects versions newer than the latest, here version 3. `version:old` selects versions older than the latest, here version 1. `version:none` selects models that are not versioned. Selecting the model by name, `dim_customers`, selects all of its versions.\n\nCOMMON MISTAKES:\n- `version:latest` with version 3: the latest version is the one `latest_version` names, not the highest number.\n- `version:prerelease` with version 1: prerelease versions are newer than the latest, and older ones are `old`.\n- `dim_customers` with version 2 only: the model name selects every version; `dim_customers.v2` selects one.\n- Versions 1 and 3 together: none of these values selects that pair, because `old` and `prerelease` each select one side of the latest version.",
+    "references": "https://docs.getdbt.com/reference/node-selection/methods",
+    "dbtVersionFocus": "Model versions"
+  },
+  {
+    "id": 4013,
+    "format": "build_list",
+    "category": "Debugging data modeling errors",
+    "difficulty": "Basic",
+    "questionText": "A behavior change flag in dbt switches between an old and a new behavior. Order the phases the flag goes through, from first to last.",
+    "items": [
+      "The new behavior is added behind the flag, which is disabled by default",
+      "The flag's default switches to the new behavior, and setting it to `false` keeps the old one",
+      "The old behavior is removed from the dbt codebase"
+    ],
+    "distractors": [
+      "The flag moves from `dbt_project.yml` to `profiles.yml`, so each developer can set it"
+    ],
+    "explanation": "CORRECT ACTION:\nA behavior change flag is first introduced disabled by default, so the old behavior is kept unless you opt in. When it matures, its default switches to the new behavior; you can still keep the old behavior by setting the flag to `false`, but you may see deprecation warnings. Finally the old behavior is removed from the codebase.\n\nCOMMON MISTAKES:\n- Placing the default switch first: a new flag starts disabled, so upgrading dbt alone does not change behavior.\n- Placing the removal before maturity: the old behavior stays available, behind `false`, until it is removed.\n- Including the move to `profiles.yml`: behavior change flags are always set in the `flags` dictionary in `dbt_project.yml`.",
+    "references": "https://docs.getdbt.com/reference/global-configs/behavior-changes",
+    "dbtVersionFocus": "Behavior change flags"
+  },
+  {
+    "id": 5013,
+    "format": "hotspot",
+    "category": "Managing dbt models governance",
+    "difficulty": "Advanced",
+    "questionText": "The project runs on Snowflake, and `dim_customers` declares the constraints below. Click the line that declares the only constraint here that Snowflake enforces, so that the model fails to build when its data violates it.",
+    "codeSnippet": "models:\n  - name: dim_customers\n    config:\n      materialized: table\n      contract:\n        enforced: true\n    columns:\n      - name: customer_id\n        data_type: int\n        constraints:\n          - type: primary_key\n      - name: email\n        data_type: varchar\n        constraints:\n          - type: unique\n          - type: not_null\n      - name: account_id\n        data_type: int\n        constraints:\n          - type: foreign_key\n            to: ref('dim_accounts')\n            to_columns: [account_id]",
+    "codeLanguage": "yaml",
+    "target": {
+      "kind": "code_lines",
+      "correctLines": [
+        16
+      ]
+    },
+    "explanation": "CORRECT ACTION:\nOn Snowflake, `not_null` is definable and enforced, so a null `email` makes the build fail. `primary_key`, `unique` and `foreign_key` are definable but not enforced: Snowflake records them as metadata, and the model still builds when the data violates them.\n\nCOMMON MISTAKES:\n- `- type: primary_key`: Snowflake accepts it in the DDL but does not enforce it, so duplicate `customer_id` values do not stop the build.\n- `- type: unique`: also definable but not enforced on Snowflake.\n- `- type: foreign_key`: also recorded for metadata only, so an `account_id` missing from `dim_accounts` does not stop the build.\n- `enforced: true`: it enforces the contract, which constraints require, but it is not itself a constraint on the data.",
+    "references": "https://docs.getdbt.com/docs/mesh/govern/model-contracts",
+    "dbtVersionFocus": "Constraints"
+  },
+  {
+    "id": 5014,
+    "format": "hotspot",
+    "category": "Developing and optimizing dbt models",
+    "difficulty": "Intermediate",
+    "questionText": "You run `dbt run --select fct_orders --empty` to check that `fct_orders` builds without reading its input data. Click the line whose input table dbt still reads in full during this run.",
+    "codeSnippet": "{{ config(materialized='table') }}\n\nwith orders as (\n    select * from {{ ref('stg_orders') }}\n),\n\ncustomers as (\n    select * from {{ source('crm', 'customers') }}\n),\n\nfx_rates as (\n    select * from analytics.finance.fx_rates\n)\n\nselect\n    orders.order_id,\n    customers.customer_name,\n    orders.amount * fx_rates.rate_to_usd as amount_usd\nfrom orders\njoin customers on orders.customer_id = customers.customer_id\njoin fx_rates on orders.currency = fx_rates.currency",
+    "codeLanguage": "sql",
+    "target": {
+      "kind": "code_lines",
+      "correctLines": [
+        12
+      ]
+    },
+    "explanation": "CORRECT ACTION:\n`--empty` limits the refs and sources to zero rows: dbt replaces each `ref` and `source` with a subquery that returns no rows. `analytics.finance.fx_rates` is a hard-coded table name, not a `ref` or a `source`, so dbt sends it to the warehouse unchanged and the query reads the whole table.\n\nCOMMON MISTAKES:\n- `select * from {{ ref('stg_orders') }}`: the ref is wrapped in a `where false limit 0` subquery, so it returns zero rows.\n- `select * from {{ source('crm', 'customers') }}`: sources are limited to zero rows in the same way.\n- The `join` lines: they join the CTEs, whose inputs are already decided in the CTE definitions.",
+    "references": "https://docs.getdbt.com/docs/build/empty-flag",
+    "dbtVersionFocus": "Empty flag"
+  },
+  {
+    "id": 2015,
+    "format": "fill_blank",
+    "category": "Leveraging the dbt state",
+    "difficulty": "Intermediate",
+    "questionText": "A job should run and test only the models downstream of sources that have loaded new data since the previous production run. `prod-artifacts` holds the `sources.json` written by that run's `dbt source freshness`. Complete the selector in the second command.",
+    "codeSnippet": "dbt source freshness\ndbt build --select \"[[1]]:[[2]]+\" --state prod-artifacts",
+    "codeLanguage": "bash",
+    "blanks": [
+      {
+        "accepted": [
+          "source_status"
+        ]
+      },
+      {
+        "accepted": [
+          "fresher"
+        ]
+      }
+    ],
+    "explanation": "CORRECT ACTION:\n`source_status:fresher+` compares the current `sources.json` with the one in the `--state` directory and selects the sources that are fresher than in the previous run, plus everything downstream of them. Both runs must produce `sources.json`, which is why the job runs `dbt source freshness` before the build.\n\nCOMMON MISTAKES:\n- `state:modified`: it detects changes to project code and configuration, not new data in a source.\n- `source:<name>`: the `source` method selects sources by name, whether or not new data arrived, and does not compare freshness results.\n- `result:<status>`: it reads node statuses from a previous `run_results.json`, not source freshness results.",
+    "references": "https://docs.getdbt.com/reference/node-selection/methods",
+    "dbtVersionFocus": "source_status selector"
+  },
+  {
+    "id": 2016,
+    "format": "fill_blank",
+    "category": "Troubleshooting and optimizing dbt pipelines",
+    "difficulty": "Advanced",
+    "questionText": "On Snowflake, a CI job builds into a schema unique to each pull request. As its first step, it clones from production the incremental models that are modified or downstream of a modified model, so that the later `dbt build --select state:modified+` runs them in incremental mode. Incremental models that are new in the pull request do not exist in production and must not be cloned. Complete the selector.",
+    "codeSnippet": "dbt clone --select \"state:modified+,config.materialized:incremental,[[1]]\" --state prod-artifacts",
+    "codeLanguage": "bash",
+    "blanks": [
+      {
+        "accepted": [
+          "state:old"
+        ]
+      }
+    ],
+    "explanation": "CORRECT ACTION:\nThe comma intersects the three criteria. `state:old` keeps only nodes whose `unique_id` exists in the comparison manifest, so the job clones the pre-existing incremental models that are modified or downstream of a modified model. Once cloned, they already exist in the pull request schema, so `is_incremental()` is true when `dbt build` runs them.\n\nCOMMON MISTAKES:\n- `state:new`: it selects the nodes that have no match in the comparison manifest, the opposite of what the step needs.\n- `state:unmodified`: intersected with `state:modified+`, it drops the modified models themselves.\n- `result:success`: it filters on statuses in a previous `run_results.json`, not on whether the model exists in production.",
+    "references": "https://docs.getdbt.com/best-practices/clone-incremental-models",
+    "dbtVersionFocus": "dbt clone in CI for incremental models"
+  },
+  {
+    "id": 3014,
+    "format": "matching",
+    "category": "Leveraging the dbt state",
+    "difficulty": "Intermediate",
+    "questionText": "A CI job compares the project with the production manifest in `prod-artifacts` and uses sub-selectors of `state:modified` to narrow what it builds. Match each selector to the changes it detects.",
+    "prompts": [
+      "`state:modified.body`",
+      "`state:modified.configs`",
+      "`state:modified.relation`",
+      "`state:modified.macros`",
+      "`state:modified.contract`"
+    ],
+    "choices": [
+      "Changes to the `database`, `schema` or `alias` of a node, irrespective of `target` values",
+      "Changes to upstream macros, whether called directly or by another macro",
+      "Changes to the node body, such as model SQL or seed values",
+      "New rows loaded into a source table that the node selects from",
+      "Changes to the `name` and `data_type` of the columns in a model's contract",
+      "Changes to node configs, excluding `database`, `schema`, `alias`, `tags` and `meta`"
+    ],
+    "matches": [
+      2,
+      5,
+      0,
+      1,
+      4
+    ],
+    "explanation": "CORRECT ACTION:\n`state:modified.body` detects changes to the node body, such as model SQL or seed values. `state:modified.configs` detects config changes other than `database`, `schema`, `alias`, `tags` and `meta`. `state:modified.relation` detects changes to `database`, `schema` or `alias`, irrespective of `target` values or `generate_x_name` macros. `state:modified.macros` detects changes to upstream macros, called directly or through another macro. `state:modified.contract` detects changes to a model's contract, which include the `name` and `data_type` of its columns.\n\nCOMMON MISTAKES:\n- `state:modified.configs` with `database`, `schema` or `alias` changes: those are excluded from `configs` and detected by `state:modified.relation`.\n- `state:modified.body` with macro changes: a macro lives in its own file, so editing it leaves the calling model's SQL unchanged; `state:modified.macros` catches it.\n- Any selector with new rows in a source table: `state:modified` and its sub-selectors detect changes to project code and configuration, not to the data.",
+    "references": "https://docs.getdbt.com/reference/node-selection/methods",
+    "dbtVersionFocus": "state:modified sub-selectors"
+  },
+  {
+    "id": 5015,
+    "format": "hotspot",
+    "category": "Troubleshooting and optimizing dbt pipelines",
+    "difficulty": "Advanced",
+    "questionText": "During `dbt build`, the `relationships` test on `int_orders.customer_id`, which checks that every value exists in `stg_customers.id`, fails with severity `error`. Every other node succeeds. Select every model that dbt skips.",
+    "target": {
+      "kind": "dag",
+      "nodes": [
+        {
+          "id": "raw_customers",
+          "label": "seed: raw_customers",
+          "column": 0,
+          "row": 0
+        },
+        {
+          "id": "stg_customers",
+          "label": "stg_customers",
+          "column": 1,
+          "row": 0
+        },
+        {
+          "id": "stg_orders",
+          "label": "stg_orders",
+          "column": 1,
+          "row": 2
+        },
+        {
+          "id": "dim_customers",
+          "label": "dim_customers",
+          "column": 2,
+          "row": 0
+        },
+        {
+          "id": "int_orders",
+          "label": "int_orders",
+          "column": 2,
+          "row": 2
+        },
+        {
+          "id": "customer_segments",
+          "label": "customer_segments",
+          "column": 3,
+          "row": 0
+        },
+        {
+          "id": "fct_orders",
+          "label": "fct_orders",
+          "column": 3,
+          "row": 2
+        },
+        {
+          "id": "rpt_segments",
+          "label": "rpt_segments",
+          "column": 4,
+          "row": 0
+        },
+        {
+          "id": "rpt_customer_orders",
+          "label": "rpt_customer_orders",
+          "column": 4,
+          "row": 1
+        }
+      ],
+      "edges": [
+        [
+          "raw_customers",
+          "stg_customers"
+        ],
+        [
+          "stg_customers",
+          "dim_customers"
+        ],
+        [
+          "stg_customers",
+          "int_orders"
+        ],
+        [
+          "stg_orders",
+          "int_orders"
+        ],
+        [
+          "dim_customers",
+          "customer_segments"
+        ],
+        [
+          "customer_segments",
+          "rpt_segments"
+        ],
+        [
+          "int_orders",
+          "fct_orders"
+        ],
+        [
+          "dim_customers",
+          "rpt_customer_orders"
+        ],
+        [
+          "fct_orders",
+          "rpt_customer_orders"
+        ]
+      ],
+      "correctNodes": [
+        "fct_orders",
+        "rpt_customer_orders"
+      ]
+    },
+    "explanation": "CORRECT ACTION:\nThe `relationships` test has two parents, `int_orders` and `stg_customers`, and `int_orders` depends on `stg_customers`. A test with multiple parents where one depends on the other blocks and skips the children of the most-downstream parent only, here `int_orders`. So `fct_orders` is skipped, and `rpt_customer_orders` is skipped because its parent `fct_orders` was skipped.\n\nCOMMON MISTAKES:\n- Selecting `dim_customers`, `customer_segments` or `rpt_segments`: they descend only from `stg_customers`, the upstream parent of the test, which the failure does not block.\n- Selecting `int_orders`: the test queries it, so it is built before the test runs.\n- Leaving out `rpt_customer_orders`: one of its parents is skipped, so it cannot run either.",
+    "references": "https://docs.getdbt.com/reference/commands/build",
+    "dbtVersionFocus": "dbt build skipping with multi-parent tests"
+  },
+  {
+    "id": 5016,
+    "format": "hotspot",
+    "category": "Leveraging the dbt state",
+    "difficulty": "Intermediate",
+    "questionText": "A `dbt build` ends with the results below. You fix the SQL error in `int_orders` and, with no other dbt command in between, run `dbt retry`. Click every line for a node that `dbt retry` runs.",
+    "codeSnippet": "1 of 7 OK created sql view model main.stg_orders ............ [OK in 0.04s]\n2 of 7 OK loaded seed file main.raw_customers ............... [INSERT 2 in 0.03s]\n3 of 7 ERROR creating sql table model main.int_orders ....... [ERROR in 0.03s]\n4 of 7 OK created sql view model main.stg_customers ......... [OK in 0.01s]\n5 of 7 SKIP relation main.fct_orders ........................ [SKIP]\n6 of 7 PASS not_null_stg_customers_id ....................... [PASS in 0.02s]\n7 of 7 OK created sql table model main.dim_customers ........ [OK in 0.01s]",
+    "codeLanguage": "text",
+    "target": {
+      "kind": "code_lines",
+      "correctLines": [
+        3,
+        5
+      ]
+    },
+    "explanation": "CORRECT ACTION:\n`dbt retry` re-executes the last invocation from the point of failure, reading `run_results.json` to decide where to start. It runs the errored `int_orders` and the skipped `fct_orders`, and does not rerun the nodes that already succeeded.\n\nCOMMON MISTAKES:\n- Selecting the successful models and the passing test: retry picks up from the error rather than running the upstream nodes again.\n- Selecting only the `ERROR` line: the node skipped because of that error is part of the work left to do, so retry runs it too.\n- Selecting every line: that would be a new `dbt build`, not a retry.",
+    "references": "https://docs.getdbt.com/reference/commands/retry",
+    "dbtVersionFocus": "dbt retry"
+  },
+  {
+    "id": 3015,
+    "format": "matching",
+    "category": "Implementing and maintaining external dependencies",
+    "difficulty": "Basic",
+    "questionText": "You are declaring an exposure for a dashboard that reads two of your models. Match each exposure property to what it holds.",
+    "prompts": [
+      "`type`",
+      "`maturity`",
+      "`owner`",
+      "`depends_on`",
+      "`url`"
+    ],
+    "choices": [
+      "The link behind **View this exposure** in the generated documentation site",
+      "The `ref`, `source` or `metric` nodes that the exposure reads from",
+      "The schedule on which dbt refreshes the downstream dashboard",
+      "One of `high`, `medium` or `low`, for the level of confidence or stability in the exposure",
+      "The person or team responsible, given with a `name` or an `email`",
+      "One of `dashboard`, `notebook`, `analysis`, `ml` or `application`, used to organize the docs site"
+    ],
+    "matches": [
+      5,
+      3,
+      4,
+      1,
+      0
+    ],
+    "explanation": "CORRECT ACTION:\n`type` is one of `dashboard`, `notebook`, `analysis`, `ml` or `application` and is used to organize exposures in the docs site. `maturity` is `high`, `medium` or `low`. `owner` requires a `name` or an `email`. `depends_on` lists the refable nodes the exposure reads, which lets you run, test and list the resources that feed it. `url` populates the **View this exposure** link in the generated documentation site.\n\nCOMMON MISTAKES:\n- The refresh schedule: no exposure property schedules anything; dbt does not refresh the downstream dashboard.\n- `type` with the confidence level: the confidence or stability level is `maturity`, while `type` names the kind of downstream use.\n- `url` with the nodes it reads: `url` is only a link; the upstream nodes are listed under `depends_on`.",
+    "references": "https://docs.getdbt.com/docs/build/exposures",
+    "dbtVersionFocus": "Exposures (properties)"
+  },
+  {
+    "id": 5017,
+    "format": "hotspot",
+    "category": "Implementing and maintaining external dependencies",
+    "difficulty": "Intermediate",
+    "questionText": "`dbt parse` fails on the exposure file below with `Parsing Error: Invalid exposures config given in ... is not valid under any of the given schemas`. The model `stg_customers` exists. Click the line that causes the error.",
+    "codeSnippet": "exposures:\n  - name: customer_overview\n    label: Customer Overview\n    type: dashboard\n    maturity: production\n    url: https://bi.example.com/dashboards/12\n    owner:\n      name: Customer Analytics\n      email: analytics@example.com\n    depends_on:\n      - ref('stg_customers')",
+    "codeLanguage": "yaml",
+    "target": {
+      "kind": "code_lines",
+      "correctLines": [
+        5
+      ]
+    },
+    "explanation": "CORRECT ACTION:\n`maturity` accepts only `high`, `medium` or `low`. The value `production` fails the exposure schema, so dbt raises a parsing error for the file.\n\nCOMMON MISTAKES:\n- `label: Customer Overview`: `label` may contain spaces and capital letters; only `name` is limited to letters, numbers and underscores.\n- `type: dashboard`: `dashboard` is one of the valid types, with `notebook`, `analysis`, `ml` and `application`.\n- The `owner` block: an owner needs a `name` or an `email`, and giving both is valid.",
+    "references": "https://docs.getdbt.com/reference/exposure-properties",
+    "dbtVersionFocus": "Exposures (properties)"
+  },
+  {
+    "id": 2017,
+    "format": "fill_blank",
+    "category": "Developing and optimizing dbt models",
+    "difficulty": "Basic",
+    "questionText": "The Python model `customer_scores.py` must read the SQL model `stg_customers`, so that dbt builds `stg_customers` first, and return the filtered rows as the model's result. Complete the model.",
+    "codeSnippet": "def [[1]](dbt, session):\n    customers = dbt.[[2]](\"stg_customers\")\n    active = customers.filter(\"id > 1\")\n    return active",
+    "codeLanguage": "python",
+    "blanks": [
+      {
+        "accepted": [
+          "model"
+        ]
+      },
+      {
+        "accepted": [
+          "ref"
+        ]
+      }
+    ],
+    "explanation": "CORRECT ACTION:\nA Python model defines a function named `model` that takes the `dbt` and `session` arguments and returns a single DataFrame. `dbt.ref(\"stg_customers\")` reads another model as a DataFrame and adds it to the DAG as an upstream dependency.\n\nCOMMON MISTAKES:\n- `main` or the file name as the function name: dbt calls the function named `model`, whatever the file is called.\n- `source`: `dbt.source()` reads a raw source table declared in YAML and takes a source name and a table name, not a model name.\n- `{{ ref('stg_customers') }}`: Python models do not use Jinja; references go through the `dbt` argument.",
+    "references": "https://docs.getdbt.com/docs/build/python-models",
+    "dbtVersionFocus": "Python models"
+  },
+  {
+    "id": 5018,
+    "format": "hotspot",
+    "category": "Developing and optimizing dbt models",
+    "difficulty": "Advanced",
+    "questionText": "`dbt parse` fails on the Python model below with `Parsing Error: Error when trying to literal_eval an arg to dbt.ref(), dbt.source(), dbt.config() or dbt.config.get()`. Click the line that causes the error.",
+    "codeSnippet": "UPSTREAM = \"stg_customers\"\n\n\ndef model(dbt, session):\n    dbt.config(materialized=\"table\", tags=[\"scoring\"])\n    min_id = dbt.config.get(\"min_id\", 1)\n    customers = dbt.ref(UPSTREAM)\n    active = customers.filter(f\"id > {min_id}\")\n    return active",
+    "codeLanguage": "python",
+    "target": {
+      "kind": "code_lines",
+      "correctLines": [
+        7
+      ]
+    },
+    "explanation": "CORRECT ACTION:\ndbt reads the arguments of `dbt.ref()`, `dbt.source()`, `dbt.config()` and `dbt.config.get()` by static analysis while parsing, without running the Python code, so each argument must be a Python literal. `dbt.ref(UPSTREAM)` passes a variable name, which dbt cannot evaluate at parse time. Writing `dbt.ref(\"stg_customers\")` fixes it.\n\nCOMMON MISTAKES:\n- `dbt.config(materialized=\"table\", tags=[\"scoring\"])`: a string and a list of strings are literals, so this call parses.\n- `dbt.config.get(\"min_id\", 1)`: both arguments are literals.\n- The f-string in `customers.filter(...)`: dbt does not analyze DataFrame calls at parse time; only the arguments of the `dbt` methods must be literals.",
+    "references": "https://docs.getdbt.com/docs/build/python-models",
+    "dbtVersionFocus": "Python models (configuration)"
+  },
+  {
+    "id": 2018,
+    "format": "fill_blank",
+    "category": "Developing and optimizing dbt models",
+    "difficulty": "Basic",
+    "questionText": "In dbt Core 1.11, a snapshot is defined in a YAML file in the `snapshots/` directory, with no SQL file. It must record changes to the table `customers` of the source `crm`. Which key completes the snapshot definition?",
+    "codeSnippet": "snapshots:\n  - name: customers_snapshot\n    [[1]]: source('crm', 'customers')\n    config:\n      unique_key: id\n      strategy: timestamp\n      updated_at: updated_at",
+    "codeLanguage": "yaml",
+    "blanks": [
+      {
+        "accepted": [
+          "relation"
+        ]
+      }
+    ],
+    "explanation": "CORRECT ACTION:\nA snapshot defined in YAML (dbt 1.9 and later) names the table it tracks with the `relation` key, which takes `source('my_source', 'my_table')` or `ref('my_model')`. The `config` block then sets `unique_key`, `strategy` and the strategy's own settings.\n\nCOMMON MISTAKES:\n- `source`: `source(...)` is the value of the key, not the key itself.\n- `sql` or `select`: a YAML snapshot does not take a query; to transform the data first, point `relation` at an ephemeral model with `ref`.\n- `schema`: it is a config that sets where the snapshot is built, not which table it reads.",
+    "references": "https://docs.getdbt.com/docs/build/snapshots",
+    "dbtVersionFocus": "Snapshots in YAML (v1.9+)"
   }
 ];

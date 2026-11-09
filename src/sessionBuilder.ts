@@ -1,5 +1,6 @@
 import { canPresentAsDomc, formatOf, isMultipleChoice } from "./grading";
-import { Category, ExamSession, Presentation, Question, QuestionFormat } from "./types";
+import { TOPIC_WEIGHTS } from "./examTopics";
+import { ExamSession, Presentation, Question, QuestionFormat } from "./types";
 
 /** Fisher-Yates shuffle; returns a new array. */
 export function shuffle<T>(items: T[]): T[] {
@@ -42,15 +43,8 @@ const PRACTICE_DOMC_SHARE = 0.2;
 export const MOCK_EXAM_SIZE = 65;
 const MOCK_FORMAT_QUOTAS: Partial<Record<QuestionFormat, number>> = { build_list: 4, hotspot: 3, matching: 4, fill_blank: 4 };
 const MOCK_DOMC_COUNT = 6;
-/** Exam domain weights shown on the dashboard. */
-const DOMAIN_WEIGHTS: Record<Category, number> = {
-  "Develop Models": 0.37,
-  "Debug Data Models": 0.22,
-  "Test and Document Models": 0.23,
-  "Deploy dbt Projects": 0.18,
-};
 
-/** Picks the mock exam: format quotas first, then multiple choice to bring each domain near its exam weight. */
+/** Picks the mock exam: format quotas first, then multiple choice to bring each topic near its weight. */
 export function pickMockExam(bank: Question[]): Question[] {
   const picked: Question[] = [];
   for (const [format, quota] of Object.entries(MOCK_FORMAT_QUOTAS)) {
@@ -59,7 +53,7 @@ export function pickMockExam(bank: Question[]): Question[] {
   const mc = shuffle(bank.filter(isMultipleChoice));
   const used = new Set(picked.map((q) => q.id));
 
-  for (const [category, weight] of Object.entries(DOMAIN_WEIGHTS)) {
+  for (const [category, weight] of Object.entries(TOPIC_WEIGHTS)) {
     const target = Math.round(MOCK_EXAM_SIZE * weight) - picked.filter((q) => q.category === category).length;
     const take = mc.filter((q) => q.category === category && !used.has(q.id)).slice(0, Math.max(0, target));
     take.forEach((q) => used.add(q.id));

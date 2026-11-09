@@ -1,4 +1,6 @@
-export type Category = "Develop Models" | "Debug Data Models" | "Test and Document Models" | "Deploy dbt Projects";
+import type { Category } from "./examTopics";
+
+export type { Category };
 export type Difficulty = "Basic" | "Intermediate" | "Advanced";
 
 interface QuestionBase {

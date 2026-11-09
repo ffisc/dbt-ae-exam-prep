@@ -3,7 +3,7 @@ import { Question } from "./types";
 export const examQuestions: Question[] = [
   {
     id: 1,
-    category: "Develop Models",
+    category: "Managing dbt models governance",
     difficulty: "Advanced",
     questionText: "An analytics engineer is setting up a dbt Mesh architecture. A downstream project is attempting to reference `fct_orders` from an upstream `core_project` as shown in the query below. What is the minimum configuration required in the upstream project's schema file to allow this cross-project reference and ensure downstream compilation succeeds?",
     codeSnippet: `-- In downstream marketing project (models/marts/fct_marketing.sql)
@@ -22,7 +22,7 @@ select * from {{ ref('core_project', 'fct_orders') }}`,
   },
   {
     id: 2,
-    category: "Develop Models",
+    category: "Managing dbt models governance",
     difficulty: "Intermediate",
     questionText: "Which of the following describes the correct syntactical pattern for enforcing a model contract on a PostgreSQL SQL model inside its YAML definition file?",
     options: [
@@ -38,7 +38,7 @@ select * from {{ ref('core_project', 'fct_orders') }}`,
   },
   {
     id: 3,
-    category: "Develop Models",
+    category: "Managing dbt models governance",
     difficulty: "Advanced",
     questionText: "An analytics team needs to introduce a breaking schema change to an established model named `dim_users` while keeping the old schema active for old downstream nodes. They decide to use model versioning. They designate file names as `dim_users_v1.sql` and `dim_users_v2.sql`. What is the correct YAML pattern in their model schema definition to complete this version configuration?",
     options: [
@@ -54,7 +54,7 @@ select * from {{ ref('core_project', 'fct_orders') }}`,
   },
   {
     id: 4,
-    category: "Test and Document Models",
+    category: "Implementing dbt tests",
     difficulty: "Intermediate",
     questionText: "In dbt Core v1.8+, unit testing allows analytics engineers to validate model SQL logic using static mock data. For the `dim_customers.sql` model shown below, which structure correctly declares this unit test in a schema `.yml` file?",
     codeSnippet: `-- models/marts/dim_customers.sql
@@ -76,7 +76,7 @@ select * from customers where status = 'active'`,
   },
   {
     id: 5,
-    category: "Develop Models",
+    category: "Developing and optimizing dbt models",
     difficulty: "Advanced",
     questionText: "Based on the semantic model configuration below, you need to configure a metric that computes the average order value (AOV) as `total_revenue` divided by `distinct_orders`. Which approach defines this metric in your schema file?",
     codeSnippet: `semantic_models:
@@ -101,7 +101,7 @@ select * from customers where status = 'active'`,
   },
   {
     id: 6,
-    category: "Deploy dbt Projects",
+    category: "Leveraging the dbt state",
     difficulty: "Advanced",
     questionText: "An organization is deploying a Slim CI pipeline to prevent redundant warehouse runs. The pipeline compiles and runs only models that have changed and their downstream dependents. They also want unchanged upstream nodes to be resolved from the latest production run. Which CLI invocation accomplishes this Slim CI run?",
     options: [
@@ -117,7 +117,7 @@ select * from customers where status = 'active'`,
   },
   {
     id: 7,
-    category: "Develop Models",
+    category: "Developing and optimizing dbt models",
     difficulty: "Advanced",
     questionText: "The `microbatch` incremental strategy in dbt Core processes high-volume event tables batch by batch. Which statement is correct about how it filters source records and structures the compiled query?",
     codeSnippet: `{{ config(
@@ -144,7 +144,7 @@ select * from {{ ref('stg_payments') }}`,
   },
   {
     id: 8,
-    category: "Debug Data Models",
+    category: "Debugging data modeling errors",
     difficulty: "Advanced",
     questionText: "In a multi-project dbt Mesh setup, a downstream marketing project references `fct_earnings` from the upstream core finance project, and compilation fails because the model cannot be referenced across projects. The model's properties in the upstream project are shown below. What is the most likely cause?",
     codeSnippet: `# core_finance project: models/marts/_marts.yml
@@ -171,7 +171,7 @@ models:
   },
   {
     id: 9,
-    category: "Debug Data Models",
+    category: "Debugging data modeling errors",
     difficulty: "Intermediate",
     questionText: "An analytics engineer runs `dbt run` and it fails with the error below. Which change resolves it?",
     codeSnippet: `Compilation Error
@@ -194,7 +194,7 @@ models:
   },
   {
     id: 10,
-    category: "Deploy dbt Projects",
+    category: "Developing and optimizing dbt models",
     difficulty: "Advanced",
     questionText: "Models in `models/marketing/` set `+schema: marketing`, and the project uses the built-in `generate_schema_name`. They currently build in the schemas shown below. You want them built in `marketing` in production and in the developer's own target schema, such as `dbt_alice`, in development. Which approach achieves this?",
     codeSnippet: `# dbt_project.yml
@@ -221,7 +221,7 @@ models:
   },
   {
     id: 11,
-    category: "Test and Document Models",
+    category: "Implementing dbt tests",
     difficulty: "Intermediate",
     questionText: "An analytics engineer has set up both generic column tests and the new dbt v1.8 unit tests on their models. They want to execute ONLY the unit tests across their entire project to keep build cycles rapid during development. Which command correctly performs this filtered execution?",
     options: [
@@ -237,7 +237,7 @@ models:
   },
   {
     id: 12,
-    category: "Develop Models",
+    category: "Developing and optimizing dbt models",
     difficulty: "Advanced",
     questionText: "An analytics engineer is running a targeted historical backfill of a model configured with the dbt Core v1.11 `microbatch` incremental strategy. How can the developer restrict the backfill to a specific historical date range (e.g. May 10th to May 15th 2026) without editing the SQL model configuration?",
     codeSnippet: `dbt build --select my_microbatch_model ... (What flags go here?)`,
@@ -255,7 +255,7 @@ models:
   },
   {
     id: 13,
-    category: "Test and Document Models",
+    category: "Implementing and maintaining external dependencies",
     difficulty: "Basic",
     questionText: "To monitor raw data feeds arriving from an external pipeline, you want dbt to alert you if a table has not been updated in the last 24 hours. Where and how should this be configured?",
     options: [
@@ -271,7 +271,7 @@ models:
   },
   {
     id: 14,
-    category: "Develop Models",
+    category: "Managing dbt models governance",
     difficulty: "Advanced",
     questionText: "An analytics engineer has configured a model using versioning. To help clean up deprecation lifecycles, they want to send warnings to downstream developers trying to reference the older version `v1` of the model `dim_vendor`. Which YAML configuration completes this deprecation pattern?",
     codeSnippet: `models:
@@ -294,7 +294,7 @@ models:
   },
   {
     id: 15,
-    category: "Deploy dbt Projects",
+    category: "Leveraging the dbt state",
     difficulty: "Advanced",
     questionText: "In a dbt Mesh setup, which statement correctly describes how dbt Catalog visualizes downstream cross-project relationships?",
     options: [
@@ -310,7 +310,7 @@ models:
   },
   {
     id: 16,
-    category: "Deploy dbt Projects",
+    category: "Developing and optimizing dbt models",
     difficulty: "Intermediate",
     questionText: "In dbt project setups, variable precedence controls how parameters are loaded. Which configuration takes priority if a variable named `source_database` is declared both inside `dbt_project.yml` and specified as a command-line argument?",
     codeSnippet: `In dbt_project.yml:
@@ -333,7 +333,7 @@ dbt run --vars '{"source_database": "raw_sales_dev"}'`,
   },
   {
     id: 17,
-    category: "Develop Models",
+    category: "Managing dbt models governance",
     difficulty: "Advanced",
     questionText: "Your organization uses dbt groups and model access. The finance model `fct_salary` is configured as shown below. Which models can reference `fct_salary` with `{{ ref() }}`?",
     codeSnippet: `models:
@@ -355,7 +355,7 @@ dbt run --vars '{"source_database": "raw_sales_dev"}'`,
   },
   {
     id: 18,
-    category: "Test and Document Models",
+    category: "Implementing dbt tests",
     difficulty: "Basic",
     questionText: "What is the key difference between generic tests and singular tests in `dbt test` suites?",
     options: [
@@ -371,7 +371,7 @@ dbt run --vars '{"source_database": "raw_sales_dev"}'`,
   },
   {
     id: 19,
-    category: "Debug Data Models",
+    category: "Developing and optimizing dbt models",
     difficulty: "Intermediate",
     questionText: "An analytics engineer sets up a model materialized as `ephemeral`. A downstream model references this ephemeral node twice. During database operation execution, how does dbt translate this interaction under compilation?",
     codeSnippet: `{{ config(materialized='ephemeral') }}
@@ -390,7 +390,7 @@ select * from {{ ref('raw_source') }}`,
   },
   {
     id: 20,
-    category: "Deploy dbt Projects",
+    category: "Developing and optimizing dbt models",
     difficulty: "Basic",
     questionText: "A scheduled job must run `dbt build`, `dbt clean` and `dbt deps` so that each run starts without stale artifacts and builds with the packages listed in `packages.yml`. The project's `dbt_project.yml` sets `clean-targets: [target, dbt_packages]`. In which order should the job run the three commands?",
     options: [
@@ -406,7 +406,7 @@ select * from {{ ref('raw_source') }}`,
   },
   {
     id: 21,
-    category: "Develop Models",
+    category: "Managing dbt models governance",
     difficulty: "Advanced",
     questionText: "When an analytics engineer enforces a model contract with `contract: { enforced: true }`, how does dbt handle situations where the SQL SELECT query's returned columns do not align exactly with the declared columns and data types inside the schema YAML file?",
     codeSnippet: `models:
@@ -432,7 +432,7 @@ select * from {{ ref('raw_source') }}`,
   },
   {
     id: 22,
-    category: "Develop Models",
+    category: "Developing and optimizing dbt models",
     difficulty: "Advanced",
     questionText: "You want a Semantic Layer metric that measures how many users who sign up go on to make a purchase within seven days of signing up. Which YAML structure defines this metric?",
     options: [
@@ -448,7 +448,7 @@ select * from {{ ref('raw_source') }}`,
   },
   {
     id: 23,
-    category: "Deploy dbt Projects",
+    category: "Managing dbt models governance",
     difficulty: "Advanced",
     questionText: "How does a downstream dbt project declare its reliance on an upstream project's public models instead of installing the upstream code as a package?",
     options: [
@@ -464,7 +464,7 @@ select * from {{ ref('raw_source') }}`,
   },
   {
     id: 24,
-    category: "Deploy dbt Projects",
+    category: "Leveraging the dbt state",
     difficulty: "Advanced",
     questionText: "An analytics engineer is deploying models in an isolated Dev warehouse environment. They want to compile only their modified models while using dbt's model deferral feature. None of the unmodified upstream models has been built in the Dev schema. When deferral is active (`--defer --state state_dir`), how does dbt handle references to unmodified upstream models during compilation?",
     options: [
@@ -480,7 +480,7 @@ select * from {{ ref('raw_source') }}`,
   },
   {
     id: 25,
-    category: "Test and Document Models",
+    category: "Implementing dbt tests",
     difficulty: "Advanced",
     questionText: "A developer writes a dbt unit test for the incremental branch of the model below. What is the correct way to supply mock rows for the rows already in the table?",
     codeSnippet: `-- models/my_incremental_model.sql
@@ -504,7 +504,7 @@ where event_at > (select max(event_at) from {{ this }})
   },
   {
     id: 26,
-    category: "Develop Models",
+    category: "Developing and optimizing dbt models",
     difficulty: "Intermediate",
     questionText: "An analytics engineer is configuring a `dbt snapshot` to track slow-changing dimensions (SCD Type 2) on an orders table. When using the `timestamp` strategy, what does dbt expect as the minimum model properties, and what are the generated columns added by dbt in the snapshot target table?",
     options: [
@@ -520,7 +520,7 @@ where event_at > (select max(event_at) from {{ this }})
   },
   {
     id: 27,
-    category: "Develop Models",
+    category: "Developing and optimizing dbt models",
     difficulty: "Basic",
     questionText: "Under what conditions is it appropriate to configure and load data using a dbt seed rather than building a model?",
     options: [
@@ -536,7 +536,7 @@ where event_at > (select max(event_at) from {{ this }})
   },
   {
     id: 28,
-    category: "Develop Models",
+    category: "Developing and optimizing dbt models",
     difficulty: "Intermediate",
     questionText: "A dbt project needs to write tables to different warehouse databases depending on the active target environment. Which approach customizes how dbt chooses the database for a model?",
     options: [
@@ -552,7 +552,7 @@ where event_at > (select max(event_at) from {{ this }})
   },
   {
     id: 29,
-    category: "Debug Data Models",
+    category: "Implementing and maintaining external dependencies",
     difficulty: "Intermediate",
     questionText: "An analytics developer runs `dbt source freshness` and gets an active failure because the raw source table freshness check crossed the error threshold. However, they verify that fresh data was loaded 10 minutes ago. What is the most likely root cause of this mismatch?",
     options: [
@@ -568,7 +568,7 @@ where event_at > (select max(event_at) from {{ this }})
   },
   {
     id: 30,
-    category: "Test and Document Models",
+    category: "Implementing dbt tests",
     difficulty: "Advanced",
     questionText: "You want to create a custom generic test named `is_even` to assert that all column values in a database are divisible by 2. How should you structure this test inside your project?",
     options: [
@@ -584,7 +584,7 @@ where event_at > (select max(event_at) from {{ this }})
   },
   {
     id: 31,
-    category: "Deploy dbt Projects",
+    category: "Developing and optimizing dbt models",
     difficulty: "Intermediate",
     questionText: "An analytics engineer completes code changes for a single downstream model named `fct_user_retention`. They want to compile, run, and replace this model inside the database but skip compiling and executing any matching column assertions or source validation tests. Which command performs this isolated operation?",
     options: [
@@ -600,7 +600,7 @@ where event_at > (select max(event_at) from {{ this }})
   },
   {
     id: 32,
-    category: "Test and Document Models",
+    category: "Developing and optimizing dbt models",
     difficulty: "Basic",
     questionText: "To avoid cluttering schema YAML files with very long, multi-line paragraph descriptions of dbt models or columns, which feature should you use to separate descriptions into clean dedicated markdown files?",
     options: [
@@ -616,7 +616,7 @@ where event_at > (select max(event_at) from {{ this }})
   },
   {
     id: 33,
-    category: "Debug Data Models",
+    category: "Debugging data modeling errors",
     difficulty: "Intermediate",
     questionText: "A `dbt run` fails with the error below. How does this error occur in dbt projects, and how should it be corrected?",
     codeSnippet: `Found a cycle: model.shop.dim_customers --> model.shop.fct_orders`,
@@ -634,7 +634,7 @@ where event_at > (select max(event_at) from {{ this }})
   },
   {
     id: 34,
-    category: "Develop Models",
+    category: "Developing and optimizing dbt models",
     difficulty: "Advanced",
     questionText: "When setting up Type II slowly changing dimensions in dbt using a snapshot `check` strategy, how does dbt evaluate changes if `check_cols` is configured with a list of values, and what is the behavior if any value changes to null?",
     options: [
@@ -650,7 +650,7 @@ where event_at > (select max(event_at) from {{ this }})
   },
   {
     id: 35,
-    category: "Develop Models",
+    category: "Developing and optimizing dbt models",
     difficulty: "Intermediate",
     questionText: "In writing highly dynamic dbt configurations, what is the core behavioral and compilation difference between utilizing the Jinja functions `{{ var() }}` and `{{ env_var() }}`?",
     options: [
@@ -666,7 +666,7 @@ where event_at > (select max(event_at) from {{ this }})
   },
   {
     id: 36,
-    category: "Deploy dbt Projects",
+    category: "Developing and optimizing dbt models",
     difficulty: "Intermediate",
     questionText: "Where is the `profiles.yml` file normally stored, and how does configuring the `threads` option inside a profile connection block affect execution performance during `dbt run`?",
     options: [
@@ -676,13 +676,13 @@ where event_at > (select max(event_at) from {{ this }})
       "It is stored in the `logs/` directory; `threads` sets how many CPU cores dbt uses to compile."
     ],
     correctAnswers: [1],
-    explanation: "CORRECT ACTION:\nThe default location of `profiles.yml` is the `~/.dbt/` directory. The `threads` setting is the maximum number of models dbt builds in parallel, so models that do not depend on each other can run at the same time.\n\nINCORRECT COMPETING OPTIONS:\n- Stored in `target/`: that directory holds compiled code and artifacts, not connection profiles.\n- `threads` as retries: the number of retries is set with a separate `retries` setting, and `threads` controls parallelism.\n- Stored in `logs/` with `threads` as CPU cores: `logs/` holds log files, and `threads` sets concurrent warehouse connections, not CPU cores.",
+    explanation: "CORRECT ACTION:\nThe recommended location of `profiles.yml` is the `~/.dbt/` directory. The `threads` setting is the maximum number of models dbt builds in parallel, so models that do not depend on each other can run at the same time.\n\nINCORRECT COMPETING OPTIONS:\n- Stored in `target/`: that directory holds compiled code and artifacts, not connection profiles.\n- `threads` as retries: `threads` controls how many models run in parallel, not how often a failed model is retried.\n- Stored in `logs/` with `threads` as CPU cores: `logs/` holds log files, and `threads` sets concurrent warehouse connections, not CPU cores.",
     references: "https://docs.getdbt.com/docs/core/connect-data-platform/profiles.yml",
     dbtVersionFocus: "Core"
   },
   {
     id: 37,
-    category: "Test and Document Models",
+    category: "Implementing dbt tests",
     difficulty: "Intermediate",
     questionText: "By default, a failing generic test returns an error, and in `dbt build` the nodes downstream of it are skipped. How can a developer configure the test in its YAML properties so that a few failures raise only a warning, and an error is raised only when the failures cross a set threshold?",
     options: [
@@ -698,7 +698,7 @@ where event_at > (select max(event_at) from {{ this }})
   },
   {
     id: 38,
-    category: "Debug Data Models",
+    category: "Developing and optimizing dbt models",
     difficulty: "Advanced",
     questionText: "An analytics engineer is optimizing a dbt model on Snowflake that queries an extremely large table. They want to configure a clustering key to speed up query performance. What is the correct configuration format in the model's configuration block?",
     options: [
@@ -714,7 +714,7 @@ where event_at > (select max(event_at) from {{ this }})
   },
   {
     id: 39,
-    category: "Develop Models",
+    category: "Developing and optimizing dbt models",
     difficulty: "Intermediate",
     questionText: "To implement access audit logging or clean up auxiliary staging tables, a developer wants to run a raw SQL command immediately before or after a model is built. What is the correct way to declare this behavior inside dbt models?",
     options: [
@@ -730,7 +730,7 @@ where event_at > (select max(event_at) from {{ this }})
   },
   {
     id: 40,
-    category: "Deploy dbt Projects",
+    category: "Managing dbt models governance",
     difficulty: "Advanced",
     questionText: "Under dbt Mesh architectures, you have published a public model `dim_products` inside a core catalog project. You want to remove an existing column from it while maintaining backward compatibility for downstream consumer projects that reference it under tight schema contracts. What is the recommended strategy?",
     options: [
@@ -746,7 +746,7 @@ where event_at > (select max(event_at) from {{ this }})
   },
   {
     id: 41,
-    category: "Develop Models",
+    category: "Developing and optimizing dbt models",
     difficulty: "Advanced",
     questionText: "A developer is writing a cross-database macro. It must return the first expression below when dbt runs on Snowflake and the second when it runs on BigQuery. Which property should the macro check to choose between them?",
     codeSnippet: `-- Snowflake
@@ -768,7 +768,7 @@ date_trunc(created_at, month)`,
   },
   {
     id: 42,
-    category: "Develop Models",
+    category: "Developing and optimizing dbt models",
     difficulty: "Advanced",
     questionText: "An analytics engineer materializes a staging model as `ephemeral`. A downstream model references it three times, inside separate join subqueries. How does dbt compile the downstream model?",
     options: [
@@ -784,7 +784,7 @@ date_trunc(created_at, month)`,
   },
   {
     id: 43,
-    category: "Develop Models",
+    category: "Developing and optimizing dbt models",
     difficulty: "Basic",
     questionText: "Which statement describes how the `source()` and `ref()` Jinja functions differ in compilation and lineage?",
     options: [
@@ -800,7 +800,7 @@ date_trunc(created_at, month)`,
   },
   {
     id: 44,
-    category: "Develop Models",
+    category: "Developing and optimizing dbt models",
     difficulty: "Advanced",
     questionText: "By default, when you configure a custom schema on a dbt model (e.g., `schema: marketing`) and run the model in development under target schema `dev_john`, how does dbt determine the final target schema name in the database?",
     options: [
@@ -816,7 +816,7 @@ date_trunc(created_at, month)`,
   },
   {
     id: 45,
-    category: "Develop Models",
+    category: "Debugging data modeling errors",
     difficulty: "Intermediate",
     questionText: "An analytics engineer creates two separate SQL files in their project: one at `models/staging/marketing/stg_customers.sql` and another at `models/staging/sales/stg_customers.sql`. How does dbt handle this configuration when they run `dbt compile`?",
     options: [
@@ -832,7 +832,7 @@ date_trunc(created_at, month)`,
   },
   {
     id: 46,
-    category: "Develop Models",
+    category: "Developing and optimizing dbt models",
     difficulty: "Intermediate",
     questionText: "A project declares `cutoff_date` under `vars` in `dbt_project.yml`, and a scheduled job runs the command below. Which value does dbt use for `cutoff_date`?",
     codeSnippet: `dbt run --vars '{"cutoff_date": "2026-01-01"}'`,
@@ -849,7 +849,7 @@ date_trunc(created_at, month)`,
   },
   {
     id: 47,
-    category: "Develop Models",
+    category: "Developing and optimizing dbt models",
     difficulty: "Advanced",
     questionText: "You are designing an incremental model and configure `on_schema_change: sync_all_columns`. During a source deployment, we drop three legacy columns and add two new columns to the SQL model file. How does dbt handle the target database table on the next incremental execution run?",
     options: [
@@ -865,7 +865,7 @@ date_trunc(created_at, month)`,
   },
   {
     id: 48,
-    category: "Develop Models",
+    category: "Developing and optimizing dbt models",
     difficulty: "Intermediate",
     questionText: "When writing highly modular models, what three conditions must evaluate to true for the dbt Jinja conditional block `is_incremental()` to return true during pipeline execution?",
     codeSnippet: `{% if is_incremental() %}
@@ -885,7 +885,7 @@ date_trunc(created_at, month)`,
   },
   {
     id: 49,
-    category: "Debug Data Models",
+    category: "Developing and optimizing dbt models",
     difficulty: "Intermediate",
     questionText: "An analytics engineer changes a model's materialization from `view` to `table` in its `config()` block and runs `dbt run` while the view still exists in the warehouse. Which statement describes the risk in this change and how dbt's built-in materializations handle it?",
     options: [
@@ -901,7 +901,7 @@ date_trunc(created_at, month)`,
   },
   {
     id: 50,
-    category: "Debug Data Models",
+    category: "Debugging data modeling errors",
     difficulty: "Advanced",
     questionText: "A model named `stg_payments` in `models/staging/` fails in CI. A developer wants its `select` statement, with every `ref` and `source` resolved to a relation name, to paste into a warehouse console. Where in the project filesystem should they look?",
     options: [
@@ -917,7 +917,7 @@ date_trunc(created_at, month)`,
   },
   {
     id: 51,
-    category: "Debug Data Models",
+    category: "Debugging data modeling errors",
     difficulty: "Basic",
     questionText: "When onboarding a new analytics developer, they run `dbt debug`. What is the primary purpose of this command compared to `dbt compile` or `dbt run`?",
     options: [
@@ -933,23 +933,29 @@ date_trunc(created_at, month)`,
   },
   {
     id: 52,
-    category: "Debug Data Models",
+    category: "Troubleshooting and optimizing dbt pipelines",
     difficulty: "Intermediate",
-    questionText: "An analytics run crashes with a database error: 'Transaction aborted due to lock wait timeout'. You check the profile and see `threads: 16`. How does the `threads` setting relate to this error, and how should it be handled for diagnostic troubleshooting?",
+    questionText: "On Postgres, two independent table models, `fct_orders` and `fct_payments`, both use the config below. The `post_hook` updates the same row of a shared audit table and then keeps the model's transaction open for five seconds. The profile sets `threads: 4`, and `dbt run` fails one of the two models with `canceling statement due to lock timeout`. What happens when you rerun the same command with `--threads 1`, and why?",
+    codeSnippet: `{{ config(
+    materialized='table',
+    pre_hook="set lock_timeout = '2s'",
+    post_hook="update audit.load_audit set last_loaded_at = now() where id = 1; select pg_sleep(5)"
+) }}`,
+    codeLanguage: "sql",
     options: [
-      "`threads` sets the number of CPU cores dbt uses locally, so lowering it has no effect on warehouse locks.",
-      "`threads` sets how many models run in parallel; setting it to 1 shows which models contend for locks.",
-      "`threads` sets how many queries one model runs at once, so raising it to 32 shortens lock waits.",
-      "`threads` only affects local compilation, so the error is resolved by adding `--fail-fast` to the command."
+      "One model still fails, because `--threads` on the command line does not override the `threads` value set in the profile.",
+      "One model still fails, because `threads` sets how many CPU cores dbt uses locally, not how many models run at once.",
+      "Both models succeed, because dbt finishes one model before it starts the next, so neither update waits for the other's lock.",
+      "Both models fail, because with one thread the two post-hooks share a single connection and block each other's update."
     ],
-    correctAnswers: [1],
-    explanation: "CORRECT ACTION:\n`threads` is the maximum number of models dbt runs in parallel, each on its own warehouse connection. Parallel models that touch the same objects can hit lock conflicts. Setting `threads: 1` in `profiles.yml` runs models one at a time, which shows which models compete for the same resources.\n\nINCORRECT COMPETING OPTIONS:\n- Local CPU cores: `threads` controls warehouse connections and parallel models, so it does affect locks.\n- Queries per model: `threads` counts models running at once, and raising it adds more lock contention.\n- Local compilation and `--fail-fast`: `--fail-fast` only stops the run at the first failure and does not address lock conflicts.",
-    references: "https://docs.getdbt.com/docs/core/connect-data-platform/profiles.yml#understanding-threads",
-    dbtVersionFocus: "Core Connection Profiles"
+    correctAnswers: [2],
+    explanation: "CORRECT ACTION:\nWith `threads: 1`, dbt starts building only one model and finishes it before moving on to the next. With `threads: 4`, the two independent models run at the same time: one model's `post_hook` updates the audit row and keeps its transaction open, and the other model's update waits longer than the 2-second `lock_timeout` and is cancelled. Run one at a time, the second update starts only after the first model has finished, so both models succeed. Rerunning with `--threads 1` is a way to confirm that the error comes from models running in parallel.\n\nINCORRECT COMPETING OPTIONS:\n- `--threads` not overriding the profile: the `--threads` option sets a different number of threads than the value defined in the target.\n- Local CPU cores: `threads` is the maximum number of models dbt works on at once, so it decides whether the two updates overlap.\n- One shared connection blocking itself: with one thread the models run one after the other, and the second update finds the row free.",
+    references: "https://docs.getdbt.com/docs/running-a-dbt-project/using-threads",
+    dbtVersionFocus: "Threads and parallel models"
   },
   {
     id: 53,
-    category: "Debug Data Models",
+    category: "Debugging data modeling errors",
     difficulty: "Intermediate",
     questionText: "A developer runs `dbt run` and dbt stops before building any model, reporting `Found a cycle: model.analytics.int_orders --> model.analytics.fct_orders --> model.analytics.int_orders`. Which approach resolves this error?",
     options: [
@@ -965,7 +971,7 @@ date_trunc(created_at, month)`,
   },
   {
     id: 54,
-    category: "Debug Data Models",
+    category: "Developing and optimizing dbt models",
     difficulty: "Advanced",
     questionText: "If an analytics engineer defines a model as `ephemeral`, which of the following is a key functional and debugging constraint compared to `table` or `view` materializations?",
     options: [
@@ -981,7 +987,7 @@ date_trunc(created_at, month)`,
   },
   {
     id: 55,
-    category: "Debug Data Models",
+    category: "Debugging data modeling errors",
     difficulty: "Intermediate",
     questionText: "An analytics engineer running complex continuous integration checks wants to accelerate pre-flight validation by compiling project manifest dependencies locally. What does `dbt parse` do, and what output is cached?",
     options: [
@@ -997,7 +1003,7 @@ date_trunc(created_at, month)`,
   },
   {
     id: 56,
-    category: "Debug Data Models",
+    category: "Developing and optimizing dbt models",
     difficulty: "Intermediate",
     questionText: "When using third-party dbt packages (like `dbt-utils`), a developer wants to customize a variables setting declared inside the imported package. How is the variable value resolution completed under dbt Core architecture?",
     options: [
@@ -1013,7 +1019,7 @@ date_trunc(created_at, month)`,
   },
   {
     id: 57,
-    category: "Test and Document Models",
+    category: "Implementing dbt tests",
     difficulty: "Intermediate",
     questionText: "What is the primary operational difference in dbt between a singular data test and a generic data test?",
     options: [
@@ -1029,7 +1035,7 @@ date_trunc(created_at, month)`,
   },
   {
     id: 58,
-    category: "Test and Document Models",
+    category: "Implementing dbt tests",
     difficulty: "Advanced",
     questionText: "An analytics engineer applies an `accepted_values` test on a column that contains nullable records. If some schema rows contain null values, how does dbt evaluate this assertion, and does it fail the test?",
     options: [
@@ -1045,7 +1051,7 @@ date_trunc(created_at, month)`,
   },
   {
     id: 59,
-    category: "Test and Document Models",
+    category: "Developing and optimizing dbt models",
     difficulty: "Intermediate",
     questionText: "To support rich documentation catalog generation, a dbt developer wants to reference descriptions written inside a separate markdown (`.md`) file using the Jinja `doc()` function. What is the correct criteria for this markdown file?",
     options: [
@@ -1061,7 +1067,7 @@ date_trunc(created_at, month)`,
   },
   {
     id: 60,
-    category: "Test and Document Models",
+    category: "Implementing dbt tests",
     difficulty: "Advanced",
     questionText: "By default, a generic test that returns even one failing row is reported as an error, and `dbt test` exits with a failure. How can a developer configure the test below so that its failures are reported as warnings instead?",
     codeSnippet: `models:
@@ -1084,7 +1090,7 @@ date_trunc(created_at, month)`,
   },
   {
     id: 61,
-    category: "Test and Document Models",
+    category: "Implementing and maintaining external dependencies",
     difficulty: "Intermediate",
     questionText: "An analytics team runs `dbt source freshness` on a source table configured with `loaded_at_field: _loaded_at` and gets failures although the data arrives on time. How does dbt compute freshness for this table?",
     options: [
@@ -1100,7 +1106,7 @@ date_trunc(created_at, month)`,
   },
   {
     id: 62,
-    category: "Test and Document Models",
+    category: "Implementing dbt tests",
     difficulty: "Advanced",
     questionText: "In dbt Core v1.8+, how does an engineer run ONLY the unit tests defined in their project while completely bypassing any generic tests or custom singular SQL assertions?",
     options: [
@@ -1116,7 +1122,7 @@ date_trunc(created_at, month)`,
   },
   {
     id: 63,
-    category: "Deploy dbt Projects",
+    category: "Leveraging the dbt state",
     difficulty: "Advanced",
     questionText: "In modern dbt Slim CI configurations, you run dbt with both `--defer` and `--state` flags. What is the fundamental behavior of this setup when executing modified models locally, and does it copy production records?",
     options: [
@@ -1132,7 +1138,7 @@ date_trunc(created_at, month)`,
   },
   {
     id: 64,
-    category: "Deploy dbt Projects",
+    category: "Developing and optimizing dbt models",
     difficulty: "Intermediate",
     questionText: "A developer runs `dbt docs generate` and serves the documentation site to browse project lineage and column metadata. Which artifacts does the site read?",
     options: [
@@ -1148,7 +1154,7 @@ date_trunc(created_at, month)`,
   },
   {
     id: 65,
-    category: "Deploy dbt Projects",
+    category: "Developing and optimizing dbt models",
     difficulty: "Intermediate",
     questionText: "How can an analytics engineer safely handle production warehouse credentials without committing raw secrets (like passwords or tokens) into git repositories?",
     options: [
@@ -1164,7 +1170,7 @@ date_trunc(created_at, month)`,
   },
   {
     id: 66,
-    category: "Develop Models",
+    category: "Developing and optimizing dbt models",
     difficulty: "Advanced",
     questionText: "A snapshot uses the `check` strategy with `check_cols: ['status']`. On the next `dbt snapshot`, the `status` value of a record has changed from `'active'` to `NULL`. What does dbt do?",
     options: [
@@ -1180,7 +1186,7 @@ date_trunc(created_at, month)`,
   },
   {
     id: 67,
-    category: "Deploy dbt Projects",
+    category: "Developing and optimizing dbt models",
     difficulty: "Advanced",
     questionText: "An analytics engineer writes a custom `generate_schema_name` macro. Why is it standard practice to keep a check on `target.name` inside this macro, and what is the risk if the macro simply returns `custom_schema_name`?",
     options: [
@@ -1196,7 +1202,7 @@ date_trunc(created_at, month)`,
   },
   {
     id: 68,
-    category: "Develop Models",
+    category: "Developing and optimizing dbt models",
     difficulty: "Advanced",
     questionText: "An incremental model is configured with a `unique_key` constraint. During execution, some records returned by the source model query contain null values in the unique key column. How do common database adapters (such as Snowflake or BigQuery) handle these records, and what is the resulting side-effect?",
     options: [
@@ -1212,7 +1218,7 @@ date_trunc(created_at, month)`,
   },
   {
     id: 69,
-    category: "Debug Data Models",
+    category: "Debugging data modeling errors",
     difficulty: "Advanced",
     questionText: "A custom macro calls `run_query` against the database catalog and reads `results.columns[0].values()`. Every dbt command fails while parsing the project because `results` is `None`. What dbt concept explains this, and what is the correct fix?",
     options: [
@@ -1228,7 +1234,7 @@ date_trunc(created_at, month)`,
   },
   {
     id: 70,
-    category: "Develop Models",
+    category: "Developing and optimizing dbt models",
     difficulty: "Intermediate",
     questionText: "In dbt Core 1.11, what is the structural relationship between a semantic model and a metric in the dbt Semantic Layer?",
     options: [
@@ -1244,7 +1250,7 @@ date_trunc(created_at, month)`,
   },
   {
     id: 71,
-    category: "Develop Models",
+    category: "Developing and optimizing dbt models",
     difficulty: "Basic",
     questionText: "By default, which column that dbt adds to a snapshot table is NULL for the row holding the current version of a record?",
     options: [
@@ -1260,7 +1266,7 @@ date_trunc(created_at, month)`,
   },
   {
     id: 72,
-    category: "Debug Data Models",
+    category: "Debugging data modeling errors",
     difficulty: "Intermediate",
     questionText: "If a model's materialization statement encounters a syntax error or execution failure during `dbt run`, does dbt execute the post-hook defined for that model?",
     options: [
@@ -1276,7 +1282,7 @@ date_trunc(created_at, month)`,
   },
   {
     id: 73,
-    category: "Deploy dbt Projects",
+    category: "Managing dbt models governance",
     difficulty: "Intermediate",
     questionText: "When adopting a distributed team project setup with dbt Mesh, a developer in a downstream `finance` project needs to reference a public model named `stg_customers` owned by an upstream project named `core_platform`. What is the correct syntax for the `ref()` function?",
     options: [
@@ -1293,7 +1299,7 @@ date_trunc(created_at, month)`,
   },
   {
     id: 74,
-    category: "Test and Document Models",
+    category: "Developing and optimizing dbt models",
     difficulty: "Basic",
     questionText: "When planning a dbt transformation strategy, why is storing large, frequently updated transactional tables as dbt seeds considered a major anti-pattern?",
     options: [
@@ -1309,7 +1315,7 @@ date_trunc(created_at, month)`,
   },
   {
     id: 75,
-    category: "Test and Document Models",
+    category: "Implementing and maintaining external dependencies",
     difficulty: "Advanced",
     questionText: "A source table declared in `sources.yml` does not exist in the warehouse, and `dbt source freshness` fails with a database error in CI. Which change stops that table from breaking the check?",
     options: [
@@ -1325,7 +1331,7 @@ date_trunc(created_at, month)`,
   },
   {
     id: 76,
-    category: "Deploy dbt Projects",
+    category: "Leveraging the dbt state",
     difficulty: "Intermediate",
     questionText: "After a dbt execution finishes, a `run_results.json` file is generated inside the `target/` directory. What telemetry metadata does this file primarily capture, and what is its main use case?",
     options: [
@@ -1341,7 +1347,7 @@ date_trunc(created_at, month)`,
   },
   {
     id: 77,
-    category: "Develop Models",
+    category: "Developing and optimizing dbt models",
     difficulty: "Intermediate",
     questionText: "A developer writes a custom SQL script containing standard references and places it in the `analyses/` folder. What is the behavior when they execute `dbt compile`?",
     options: [
@@ -1357,7 +1363,7 @@ date_trunc(created_at, month)`,
   },
   {
     id: 78,
-    category: "Test and Document Models",
+    category: "Implementing dbt tests",
     difficulty: "Intermediate",
     questionText: "An analytics engineer is writing a custom generic test named `is_even` to reuse in validation schemas. How must they declare and structure this test to ensure dbt registers it as an applicable data test?",
     options: [
@@ -1373,7 +1379,7 @@ date_trunc(created_at, month)`,
   },
   {
     id: 79,
-    category: "Develop Models",
+    category: "Developing and optimizing dbt models",
     difficulty: "Intermediate",
     questionText: "A developer defines a model's materialization in three separate locations: `dbt_project.yml` sets it as `view` for the directory, `schema.yml` sets it as `ephemeral`, and the model's inline SQL `config()` block sets it as `table`. How will the compiling engine materialize this model?",
     options: [
@@ -1389,7 +1395,7 @@ date_trunc(created_at, month)`,
   },
   {
     id: 80,
-    category: "Develop Models",
+    category: "Developing and optimizing dbt models",
     difficulty: "Advanced",
     questionText: "Under incremental materialization on Snowflake or BigQuery, how can a developer configure dbt to only modify a specific subset of columns (e.g., `updated_at`, `status`) upon matching unique keys, instead of overriding all columns?",
     options: [
@@ -1405,7 +1411,7 @@ date_trunc(created_at, month)`,
   },
   {
     id: 81,
-    category: "Develop Models",
+    category: "Managing dbt models governance",
     difficulty: "Advanced",
     questionText: "An analytics agency configures dbt model contracts (`contract: {enforced: true}`) for multiple key warehouse staging relations. During a routine run, dbt compiles the staging SQL file. If the query output contains a different column datatype than specified in the schema YAML (e.g., `FLOAT` instead of `INT`), what will happen, and how is it processed?",
     codeSnippet: `models:
@@ -1430,7 +1436,7 @@ date_trunc(created_at, month)`,
   },
   {
     id: 82,
-    category: "Develop Models",
+    category: "Managing dbt models governance",
     difficulty: "Intermediate",
     questionText: "In multi-project dbt Mesh structures, an engineer is assigning boundaries to protect internal models. What is the fundamental behavioral difference between assigning a model `access: private` versus `access: protected`?",
     codeSnippet: `models:
@@ -1451,7 +1457,7 @@ date_trunc(created_at, month)`,
   },
   {
     id: 83,
-    category: "Deploy dbt Projects",
+    category: "Developing and optimizing dbt models",
     difficulty: "Advanced",
     questionText: "A `profiles.yml` target reads its schema with `env_var`. Which statement about `env_var` is true?",
     options: [
@@ -1467,7 +1473,7 @@ date_trunc(created_at, month)`,
   },
   {
     id: 84,
-    category: "Develop Models",
+    category: "Developing and optimizing dbt models",
     difficulty: "Advanced",
     questionText: "An analytics developer has written their own version of the `generate_surrogate_key` macro in their project, but models that call `dbt_utils.generate_surrogate_key` still use the version from the installed `dbt_utils` package. What is the correct way to make dbt use the local version?",
     codeSnippet: `-- macros/generate_surrogate_key.sql
@@ -1494,7 +1500,7 @@ from {{ ref('stg_orders') }}`,
   },
   {
     id: 85,
-    category: "Deploy dbt Projects",
+    category: "Developing and optimizing dbt models",
     difficulty: "Intermediate",
     questionText: "A security engineer manages privileges on models built by dbt. A model's properties config declares a `grants` block. When does dbt apply these grants?",
     codeSnippet: `models:
@@ -1516,7 +1522,7 @@ from {{ ref('stg_orders') }}`,
   },
   {
     id: 86,
-    category: "Debug Data Models",
+    category: "Developing and optimizing dbt models",
     difficulty: "Intermediate",
     questionText: "An engineer is writing a dynamic database helper macro that executes checks against existing tables. If we call the adapter helper `adapter.get_relation(database, schema, identifier)` and the target table does not exist physically in the database, how does dbt handle the response?",
     codeSnippet: `{% set existing_relation = adapter.get_relation(
@@ -1538,7 +1544,7 @@ from {{ ref('stg_orders') }}`,
   },
   {
     id: 87,
-    category: "Develop Models",
+    category: "Developing and optimizing dbt models",
     difficulty: "Advanced",
     questionText: "A data team has run a snapshot of customer memberships for months. The snapshot's query is `select * from {{ source('crm', 'memberships') }}`. During an upstream system migration, a new column called `loyalty_tier` is added to the source table. What happens to the existing snapshot table on the next `dbt snapshot` run?",
     options: [
@@ -1554,7 +1560,7 @@ from {{ ref('stg_orders') }}`,
   },
   {
     id: 88,
-    category: "Deploy dbt Projects",
+    category: "Developing and optimizing dbt models",
     difficulty: "Intermediate",
     questionText: "An analytics engineer wants to run a specific group of models during a scheduled staging run. What is the correct dbt selection syntax and meaning difference between separating filters with a comma (`,`) versus separating them with a space?",
     codeSnippet: `dbt run --select "tag:hourly,path:models/staging"
@@ -1573,7 +1579,7 @@ dbt run --select "tag:hourly path:models/staging"`,
   },
   {
     id: 89,
-    category: "Deploy dbt Projects",
+    category: "Developing and optimizing dbt models",
     difficulty: "Intermediate",
     questionText: "`dbt deps` fails with a version conflict: two packages installed from dbt Hub, `fivetran_log` and `dbt_utils`, each require a range of the same shared helper package, and the two ranges do not overlap. How must this conflict be resolved?",
     options: [
@@ -1589,7 +1595,7 @@ dbt run --select "tag:hourly path:models/staging"`,
   },
   {
     id: 90,
-    category: "Test and Document Models",
+    category: "Implementing dbt tests",
     difficulty: "Intermediate",
     questionText: "In dbt Core v1.8+, how does an analytics engineer provide static mock data inputs to execute a component level unit test on a transformation model, and where in the filesystem is this declared?",
     codeSnippet: `-- models/marts/dim_orders.sql
@@ -1612,7 +1618,7 @@ group by order_id`,
   },
   {
     id: 91,
-    category: "Test and Document Models",
+    category: "Implementing and maintaining external dependencies",
     difficulty: "Advanced",
     questionText: "When configuring `dbt source freshness` checks on a massive, several-terabyte database table on BigQuery or Snowflake, what is a major performance and financial gotcha, and how is it resolved in source properties?",
     codeSnippet: `sources:
@@ -1637,7 +1643,7 @@ group by order_id`,
   },
   {
     id: 92,
-    category: "Develop Models",
+    category: "Developing and optimizing dbt models",
     difficulty: "Advanced",
     questionText: "A BigQuery incremental model uses the default incremental strategy and the config below. Why can the incremental runs after the first build fail, and how do you prevent it?",
     codeSnippet: `{{ config(
@@ -1664,7 +1670,7 @@ group by order_id`,
   },
   {
     id: 93,
-    category: "Test and Document Models",
+    category: "Implementing dbt tests",
     difficulty: "Basic",
     questionText: "When designing data testing strategies, a developer adds a custom SQL script containing assertions directly into the `tests/` directory. How does dbt evaluate success or failure for these singular tests?",
     options: [
@@ -1680,7 +1686,7 @@ group by order_id`,
   },
   {
     id: 94,
-    category: "Develop Models",
+    category: "Developing and optimizing dbt models",
     difficulty: "Advanced",
     questionText: "How does the `delete+insert` incremental strategy differ from the `merge` strategy?",
     options: [
@@ -1696,7 +1702,7 @@ group by order_id`,
   },
   {
     id: 95,
-    category: "Debug Data Models",
+    category: "Developing and optimizing dbt models",
     difficulty: "Intermediate",
     questionText: "Inside an advanced dbt Jinja macro, you execute a database call using the `run_query` function. What data type is returned by `run_query`, and how should a developer extract a specific cell value?",
     codeSnippet: `{% set results = run_query('select count(*) as count from ' ~ this) %}`,
@@ -1714,7 +1720,7 @@ group by order_id`,
   },
   {
     id: 96,
-    category: "Debug Data Models",
+    category: "Debugging data modeling errors",
     difficulty: "Intermediate",
     questionText: "A developer attempts to build circular references involving ephemeral models (e.g., Ephemeral Model A references Model B, which references Ephemeral Model A). How does dbt handle this configuration, and where is the exception thrown?",
     options: [
@@ -1730,7 +1736,7 @@ group by order_id`,
   },
   {
     id: 97,
-    category: "Deploy dbt Projects",
+    category: "Developing and optimizing dbt models",
     difficulty: "Intermediate",
     questionText: "An analytics engineer is running a slim deployment task in their continuous integration pipeline. They execute: `dbt run --select \"models/staging/*\" --exclude \"stg_customers+\"`. What is the final targeted model selection outcome?",
     options: [
@@ -1746,7 +1752,7 @@ group by order_id`,
   },
   {
     id: 98,
-    category: "Deploy dbt Projects",
+    category: "Developing and optimizing dbt models",
     difficulty: "Intermediate",
     questionText: "When using the `dbt clean` command, what configuration in `dbt_project.yml` controls which files and directories are deleted from the disk filesystem, and what is a destructive gotcha to protect against?",
     options: [
@@ -1762,7 +1768,7 @@ group by order_id`,
   },
   {
     id: 99,
-    category: "Deploy dbt Projects",
+    category: "Managing dbt models governance",
     difficulty: "Advanced",
     questionText: "To support coordinated project division under dbt Mesh, you cluster models into distinct 'groups'. What is the security behavior of setting `group: finance` on a set of models, and how are private model access boundaries checked?",
     codeSnippet: `groups:
@@ -1789,7 +1795,7 @@ models:
   },
   {
     id: 100,
-    category: "Develop Models",
+    category: "Developing and optimizing dbt models",
     difficulty: "Advanced",
     questionText: "When generating unique candidate/surrogate keys on composite natural columns, what is a key pitfall of utilizing simple string concatenation (like `col_a || col_b`) in SQL databases, and how do dbt macros safely handle this?",
     codeSnippet: `select {{ dbt_utils.generate_surrogate_key(['customer_id', 'order_id']) }}`,
@@ -1807,7 +1813,7 @@ models:
   },
   {
     id: 101,
-    category: "Test and Document Models",
+    category: "Implementing and maintaining external dependencies",
     difficulty: "Intermediate",
     questionText: "An analytics engineering manager configures source `freshness` checks on a high-velocity webhook interface dataset. What is the correct syntax for declaring freshness parameters inside source schemas, and does it support string plurals?",
     options: [
@@ -1823,7 +1829,7 @@ models:
   },
   {
     id: 102,
-    category: "Debug Data Models",
+    category: "Developing and optimizing dbt models",
     difficulty: "Advanced",
     questionText: "A developer filters a metadata table with `{{ this.identifier }}` in a comparison. What do `{{ this }}` and `this.identifier` render as?",
     codeSnippet: `where object_name = '{{ this.identifier }}'`,
@@ -1841,7 +1847,7 @@ models:
   },
   {
     id: 103,
-    category: "Deploy dbt Projects",
+    category: "Developing and optimizing dbt models",
     difficulty: "Basic",
     questionText: "A developer checks in multiple profile target connections inside their local `profiles.yml` configuration file under an active project named `ecommerce`. If they execute `dbt run` from their local terminal, how does dbt know which target connection (e.g., `dev` vs `prod`) to connect with?",
     options: [
@@ -1857,7 +1863,7 @@ models:
   },
   {
     id: 104,
-    category: "Develop Models",
+    category: "Developing and optimizing dbt models",
     difficulty: "Advanced",
     questionText: "An analytics team configures an incremental model tracking event histories with `on_schema_change: fail`. During a staging schema update, the source model adds two new columns. What is the behavior of dbt on the subsequent incremental execution run?",
     options: [
@@ -1873,7 +1879,7 @@ models:
   },
   {
     id: 105,
-    category: "Test and Document Models",
+    category: "Implementing dbt tests",
     difficulty: "Intermediate",
     questionText: "How do dbt unit tests (v1.8+) differ from data tests such as `unique` or singular SQL tests?",
     options: [
@@ -1889,7 +1895,7 @@ models:
   },
   {
     id: 106,
-    category: "Debug Data Models",
+    category: "Implementing and maintaining external dependencies",
     difficulty: "Advanced",
     questionText: "A source sets `loaded_at_field` and `freshness` at the source level, and one of its tables declares its own `freshness`, as shown below. Which thresholds does `dbt source freshness` apply to `session_events` and `page_views`?",
     codeSnippet: `sources:
@@ -1918,7 +1924,7 @@ models:
   },
   {
     id: 107,
-    category: "Deploy dbt Projects",
+    category: "Troubleshooting and optimizing dbt pipelines",
     difficulty: "Advanced",
     questionText: "A CI job on Snowflake runs the command below. The `prod_artifacts` directory holds the manifest from the latest production run, and none of the selected nodes exist yet in the CI target schema. What does `dbt clone` do?",
     codeSnippet: `dbt clone --state prod_artifacts --select tag:daily`,
@@ -1936,7 +1942,7 @@ models:
   },
   {
     id: 108,
-    category: "Develop Models",
+    category: "Developing and optimizing dbt models",
     difficulty: "Advanced",
     questionText: "You are implementing the `microbatch` incremental strategy on Snowflake in dbt Core v1.11 to process clickstream events in batches. Which configs must the model declare?",
     codeSnippet: `models:
@@ -1959,7 +1965,7 @@ models:
   },
   {
     id: 109,
-    category: "Develop Models",
+    category: "Developing and optimizing dbt models",
     difficulty: "Advanced",
     questionText: "An analytics team that uses the `dbt_utils` package adds the `dispatch` config below to `dbt_project.yml`. What does `search_order` control?",
     codeSnippet: `dispatch:
@@ -1979,7 +1985,7 @@ models:
   },
   {
     id: 110,
-    category: "Deploy dbt Projects",
+    category: "Leveraging the dbt state",
     difficulty: "Advanced",
     questionText: "A CI job runs `dbt run --select state:modified --defer --state prod_state`. Only `fct_revenue` is modified. It selects from `ref('stg_orders')`, which is unmodified and does not exist in the CI schema. How does dbt resolve `ref('stg_orders')`?",
     options: [
@@ -1995,7 +2001,7 @@ models:
   },
   {
     id: 111,
-    category: "Develop Models",
+    category: "Developing and optimizing dbt models",
     difficulty: "Advanced",
     questionText: "A model sets `+schema: mart`. The project does not override `generate_schema_name`. The target schema is `analytics_dev` in development and `analytics` in production. Which schema does dbt build the model in?",
     codeSnippet: `models:
@@ -2016,7 +2022,7 @@ models:
   },
   {
     id: 112,
-    category: "Test and Document Models",
+    category: "Developing and optimizing dbt models",
     difficulty: "Advanced",
     questionText: "When planning snapshot rules for historical capture, what is a crucial performance and cost trade-off between the `check` strategy and the `timestamp` strategy?",
     options: [
@@ -2032,7 +2038,7 @@ models:
   },
   {
     id: 113,
-    category: "Develop Models",
+    category: "Developing and optimizing dbt models",
     difficulty: "Advanced",
     questionText: "In the dbt Semantic Layer, the simple metrics `revenue` and `active_users` already exist. You want to add a metric `average_revenue_per_user` that divides `revenue` by `active_users`. Which definition is correct?",
     options: [
@@ -2048,7 +2054,7 @@ models:
   },
   {
     id: 114,
-    category: "Test and Document Models",
+    category: "Implementing dbt tests",
     difficulty: "Advanced",
     questionText: "An analytics engineer on Postgres is writing a unit test under dbt Core v1.8+ for a model that parses a `json` column from its input `stg_json_source`. How do they mock the value of that column for the input?",
     options: [
@@ -2064,7 +2070,7 @@ models:
   },
   {
     id: 115,
-    category: "Develop Models",
+    category: "Managing dbt models governance",
     difficulty: "Advanced",
     questionText: "When enforcing a Model Contract (`contract: {enforced: true}`) on an incremental table inside a raw Postgres warehouse, how does dbt Core regulate physical database updates during subsequent model executions?",
     options: [
@@ -2080,27 +2086,30 @@ models:
   },
   {
     id: 116,
-    category: "Debug Data Models",
+    category: "Developing and optimizing dbt models",
     difficulty: "Advanced",
-    questionText: "You configure `query-comment` properties inside `dbt_project.yml` to identify expensive warehouse run origins. What context information is available to the query-comment Jinja compiler, and what is a performance pitfall to avoid?",
-    codeSnippet: `query-comment:
-  comment: "Compiled by user: {{ target.user }} | model: {{ node.name }}"
+    questionText: "In the project `sandbox` on Postgres, `dbt_project.yml` declares a project variable and a query comment as shown below. You run `dbt run` without the `--vars` flag and read the SQL that dbt sends in the debug log. Which comment does dbt add to the statement that builds the model `stg_customers`, and where?",
+    codeSnippet: `vars:
+  cost_center: finance
+
+query-comment:
+  comment: "cost_center={{ var('cost_center', 'unassigned') }} node={{ node.unique_id if node else 'internal' }}"
   append: true`,
     codeLanguage: "yaml",
     options: [
-      "Only static strings are supported; Jinja in the comment causes a parsing error and slows compilation for large projects.",
-      "`target`, `node` and `run_started_at` are available; per-query values such as a timestamp defeat warehouse result caching.",
-      "`target` and `node` are available; adding a comment of any kind disables the warehouse's query caching for the project.",
-      "`target` and `var` are available; setting `append: true` makes dbt send each comment as a separate statement."
+      "`/* cost_center=finance node=model.sandbox.stg_customers */`, at the end of the statement",
+      "`/* cost_center=unassigned node=model.sandbox.stg_customers */`, at the end of the statement",
+      "`/* cost_center=finance node=model.sandbox.stg_customers */`, at the start of the statement",
+      "`/* cost_center=unassigned node=internal */`, at the start of the statement"
     ],
     correctAnswers: [1],
-    explanation: "CORRECT ACTION:\nThe `query-comment` text is rendered with Jinja and can use context such as `target`, `node` and `run_started_at`. A value that differs on every query, such as a timestamp, makes each query text unique, so the warehouse cannot reuse its cached result.\n\nINCORRECT COMPETING OPTIONS:\n- Static strings only: the comment is rendered as Jinja, as the `target` and `node` references in the snippet show.\n- Any comment disables caching: a comment with fixed text keeps the query text identical, so caching still works.\n- `var` only plus separate statements: `node` is also available, and `append: true` adds the comment to the query itself, not as a separate statement.",
+    explanation: "CORRECT ACTION:\nIn a query comment, `var()` reads only variables passed with `--vars` on the command line; variables in the `vars` block of `dbt_project.yml` are not accessible, so the default `unassigned` is used. The `node` context variable holds the node being run, so its `unique_id` is `model.sandbox.stg_customers`. `append: true` adds the comment at the bottom of the query instead of the top.\n\nINCORRECT COMPETING OPTIONS:\n- `cost_center=finance` at the end: the project-level `vars` block is not visible when dbt renders query comments.\n- `cost_center=finance` at the start: the variable is not visible, and `append: true` moves the comment to the end.\n- `node=internal` at the start: `node` is set for the statement that builds a model, and `append: true` places the comment at the end.",
     references: "https://docs.getdbt.com/reference/project-configs/query-comment",
-    dbtVersionFocus: "Core Query Comments & Debugging"
+    dbtVersionFocus: "Query comments"
   },
   {
     id: 117,
-    category: "Deploy dbt Projects",
+    category: "Developing and optimizing dbt models",
     difficulty: "Intermediate",
     questionText: "To defend `profiles.yml` against committing hardcoded passwords or database tokens into security repositories, what is the best practice for establishing safe credential management, and how is it parsed?",
     codeSnippet: `outputs:
@@ -2122,7 +2131,7 @@ models:
   },
   {
     id: 118,
-    category: "Develop Models",
+    category: "Developing and optimizing dbt models",
     difficulty: "Advanced",
     questionText: "An analytics engineer sets `on_schema_change: sync_all_columns` on an incremental model. What does dbt do on the next incremental run when a column is removed from the model's query?",
     options: [
@@ -2138,7 +2147,7 @@ models:
   },
   {
     id: 119,
-    category: "Debug Data Models",
+    category: "Troubleshooting and optimizing dbt pipelines",
     difficulty: "Intermediate",
     questionText: "You are attempting to speed up compilation and execution by running `dbt run --threads 16`. What controls thread allocations, and what is a primary debug gotcha of configuring excessively high thread counts?",
     options: [
@@ -2154,7 +2163,7 @@ models:
   },
   {
     id: 120,
-    category: "Test and Document Models",
+    category: "Implementing dbt tests",
     difficulty: "Advanced",
     questionText: "To keep deployment alerts clean, you configure failure threshold boundaries using `warn_if` and `error_if` on a key metrics test. How do these properties evaluate test outcomes?",
     codeSnippet: `data_tests:
@@ -2173,5 +2182,539 @@ models:
     explanation: "CORRECT ACTION:\nA data test returns the rows that fail, and `warn_if` and `error_if` are conditions on the count of those rows. In the snippet, more than 5 failing rows gives a warning, and more than 10 gives an error.\n\nINCORRECT COMPETING OPTIONS:\n- Percentage of failing rows: the conditions use an absolute row count, not a percentage.\n- Number of failing tests in the run: each test is evaluated on its own result.\n- Run time of the test: thresholds apply to the failing row count, not to duration.",
     references: "https://docs.getdbt.com/reference/resource-properties/tests#error_if-and-warn_if",
     dbtVersionFocus: "Advanced Testing Customization"
+  },
+  {
+    id: 121,
+    category: "Managing dbt models governance",
+    difficulty: "Intermediate",
+    questionText: "On Postgres, `dim_customers` is materialized as a table with the enforced contract below. Its SQL returns the same three columns with matching data types, selected in the order `customer_name`, `customer_id`, `created_at`. What happens when you run `dbt run --select dim_customers`?",
+    codeSnippet: `models:
+  - name: dim_customers
+    config:
+      materialized: table
+      contract:
+        enforced: true
+    columns:
+      - name: customer_id
+        data_type: int
+      - name: created_at
+        data_type: date
+      - name: customer_name
+        data_type: text`,
+    codeLanguage: "yaml",
+    options: [
+      "The contract check fails, because the SQL does not select the columns in the order the YAML declares.",
+      "The model builds, and the table's columns follow the order of the `select` in the model's SQL.",
+      "The model builds, and the table's columns follow the order declared in the YAML contract.",
+      "The model builds, and dbt logs a warning that the column order differs from the contract."
+    ],
+    correctAnswers: [2],
+    explanation: "CORRECT ACTION:\nThe contract's preflight check compares the names and data types of the columns, and it does not depend on their order in the SQL or the YAML. dbt then writes the column names and data types into the DDL it sends to the platform and orders the columns as the contract declares them, not as the SQL selects them.\n\nINCORRECT COMPETING OPTIONS:\n- Failing on column order: the preflight check is agnostic to the order of the columns.\n- Columns in the order of the SQL: with an enforced contract, dbt orders the columns per the contract instead of the model's SQL.\n- A warning about column order: order is not part of the contract check, so dbt raises no warning and the run completes with `WARN=0`.",
+    references: "https://docs.getdbt.com/docs/mesh/govern/model-contracts",
+    dbtVersionFocus: "Model contracts"
+  },
+  {
+    id: 122,
+    category: "Managing dbt models governance",
+    difficulty: "Advanced",
+    questionText: "The incremental model `fct_orders` does not set `on_schema_change`, so the default applies. You add an enforced contract to it that declares the `name` and `data_type` of every column its SQL returns. What happens on the next `dbt run`?",
+    options: [
+      "dbt raises an error while parsing, because a contracted incremental model must set `on_schema_change` to `append_new_columns` or `fail`.",
+      "dbt builds the model but checks the contract on the first run only, because later incremental runs insert into a table that already exists.",
+      "dbt builds the model and switches it to `on_schema_change: sync_all_columns`, so the table keeps matching the columns in the contract.",
+      "dbt builds the model and ignores the contract, because contracts are supported only on models materialized as `table` or `view`."
+    ],
+    correctAnswers: [0],
+    explanation: "CORRECT ACTION:\nContracts on incremental models are supported only with `on_schema_change: append_new_columns` or `on_schema_change: fail`. dbt Core 1.11 validates this while parsing, so with the default `ignore` the command stops before any model runs, with the error `Invalid value for on_schema_change: ignore. Models materialized as incremental with contracts enabled must set on_schema_change to 'append_new_columns' or 'fail'`. With `ignore`, a column added to the SQL and the YAML would never be added to the existing table, and the contract would no longer describe the table.\n\nINCORRECT COMPETING OPTIONS:\n- Checking the contract on the first run only: dbt does not get as far as building the model, because the configuration is rejected during parsing.\n- Switching to `sync_all_columns`: dbt does not change the setting, and `sync_all_columns` is itself rejected for a contracted incremental model, because removing existing columns is a breaking change.\n- Ignoring the contract on incremental models: `incremental` is a supported materialization for contracts, with the `on_schema_change` values above.",
+    references: "https://docs.getdbt.com/reference/resource-configs/contract",
+    dbtVersionFocus: "Model contracts on incremental models"
+  },
+  {
+    id: 123,
+    category: "Managing dbt models governance",
+    difficulty: "Intermediate",
+    questionText: "`dim_customers` is versioned as shown below. The downstream model `fct_orders` selects from `{{ ref('dim_customers') }}`, without a version argument. Which version of `dim_customers` does `fct_orders` read?",
+    codeSnippet: `models:
+  - name: dim_customers
+    latest_version: 1
+    config:
+      materialized: table
+    versions:
+      - v: 1
+      - v: 2
+      - v: 3`,
+    codeLanguage: "yaml",
+    options: [
+      "Version 3, because an unpinned `ref` resolves to the numerically greatest version.",
+      "None, because dbt raises an error when a `ref` to a versioned model omits `v`.",
+      "Version 3, because `latest_version` only controls what `version:latest` selects.",
+      "Version 1, because an unpinned `ref` resolves to the version in `latest_version`."
+    ],
+    correctAnswers: [3],
+    explanation: "CORRECT ACTION:\n`latest_version` sets the version that unpinned `ref()` calls resolve to. With `latest_version: 1`, `ref('dim_customers')` compiles to the relation of version 1, and versions 2 and 3 are prereleases. dbt logs that it resolved the unpinned reference to `dim_customers.v1` and that a prerelease version 3 is available.\n\nINCORRECT COMPETING OPTIONS:\n- The numerically greatest version: that is only the default when `latest_version` is not set.\n- An error for a missing `v`: an unpinned `ref` is valid; dbt resolves it to the latest version and the model builds.\n- `latest_version` affecting selection only: it governs both unpinned `ref` calls and the `version:` selection method.",
+    references: "https://docs.getdbt.com/reference/resource-properties/latest_version",
+    dbtVersionFocus: "Model versions"
+  },
+  {
+    id: 124,
+    category: "Managing dbt models governance",
+    difficulty: "Advanced",
+    questionText: "On Postgres, `dim_customers` is materialized as a table and declares the properties below. No `contract` config is set for it anywhere in the project. Its SQL returns three rows: one with a null `customer_id`, and two that share the same `customer_id`. What happens when you run `dbt run --select dim_customers`?",
+    codeSnippet: `models:
+  - name: dim_customers
+    config:
+      materialized: table
+    columns:
+      - name: customer_id
+        data_type: int
+        constraints:
+          - type: not_null
+          - type: primary_key
+      - name: customer_name
+        data_type: text`,
+    codeLanguage: "yaml",
+    options: [
+      "The run fails, because Postgres rejects the null `customer_id` when dbt inserts the rows.",
+      "The model builds with all three rows, because dbt applies constraints only with an enforced contract.",
+      "The run fails during parsing, because `constraints` are accepted only on models with an enforced contract.",
+      "The model builds with all three rows, and dbt logs a warning for each constraint the data violates."
+    ],
+    correctAnswers: [1],
+    explanation: "CORRECT ACTION:\nTo use constraints, a model must declare and enforce a contract. Without `contract: {enforced: true}`, dbt leaves the constraints out of the DDL, so Postgres has nothing to check and stores all three rows, null and duplicate included.\n\nINCORRECT COMPETING OPTIONS:\n- Postgres rejecting the null value: that happens only once the contract is enforced, because dbt then writes `not null primary key` into the table's DDL and the build fails with a not-null violation.\n- A parsing error: dbt accepts the `constraints` property without a contract and builds the model.\n- A warning per violated constraint: dbt does not check the data against constraints itself; the platform does, and only for constraints that are in the DDL. The run ends with `WARN=0`.",
+    references: "https://docs.getdbt.com/reference/resource-properties/constraints",
+    dbtVersionFocus: "Constraints"
+  },
+  {
+    id: 125,
+    category: "Managing dbt models governance",
+    difficulty: "Intermediate",
+    questionText: "`dim_customers` has two versions and `latest_version: 2`. Version 1 is defined in `dim_customers_v1.sql`, and version 2 in `dim_customers.sql`. No `alias` is configured. Which relations does `dbt run --select dim_customers` create?",
+    options: [
+      "`dim_customers` for version 2, and `dim_customers_v1` for version 1",
+      "Only `dim_customers`, which holds version 2, the latest version",
+      "`dim_customers_v1` for version 1, and `dim_customers_v2` for version 2",
+      "`dim_customers_v1`, `dim_customers_v2` and a `dim_customers` view on version 2"
+    ],
+    correctAnswers: [2],
+    explanation: "CORRECT ACTION:\nEach model version creates a database relation with the alias `<model_name>_v<v>`. The file name only tells dbt where a version is defined: the latest version may live in `dim_customers.sql` without a suffix, but it is still built as `dim_customers_v2`.\n\nINCORRECT COMPETING OPTIONS:\n- `dim_customers` for version 2: the unsuffixed file name does not change the relation name, which keeps the `_v2` suffix.\n- Only `dim_customers`: every version is built as its own relation, so version 1 is built too.\n- An extra `dim_customers` view: dbt Core 1.11 builds only one relation per version, and no view named `dim_customers` is created.",
+    references: "https://docs.getdbt.com/docs/mesh/govern/model-versions",
+    dbtVersionFocus: "Model versions"
+  },
+  {
+    id: 126,
+    category: "Debugging data modeling errors",
+    difficulty: "Basic",
+    questionText: "Your team wants to opt in to the behavior change flag `state_modified_compare_more_unrendered_values` for every run of the project. Where does dbt expect the flag to be set, so that the setting lives with the project and dbt raises no deprecation warning?",
+    options: [
+      "Under the `vars:` dictionary in `dbt_project.yml`",
+      "As a `DBT_`-prefixed environment variable",
+      "Under the `config:` block in `profiles.yml`",
+      "Under the `flags:` dictionary in `dbt_project.yml`"
+    ],
+    correctAnswers: [3],
+    explanation: "CORRECT ACTION:\nBehavior change flags must be set in the `flags` dictionary in `dbt_project.yml`. They configure behavior tied to project code, so they belong in version control and change through reviewed merge requests.\n\nINCORRECT COMPETING OPTIONS:\n- `vars:`: it defines project variables that provide values to models at compilation, not behavior flags.\n- An environment variable: dbt does not read behavior change flags from environment variables, so setting one leaves the default behavior in place.\n- `config:` in `profiles.yml`: dbt 1.11 still reads flags there, but setting them in `profiles.yml` is deprecated and raises a deprecation warning; they belong in the `flags` dictionary of `dbt_project.yml`.",
+    references: "https://docs.getdbt.com/reference/global-configs/behavior-changes",
+    dbtVersionFocus: "Behavior change flags"
+  },
+  {
+    id: 127,
+    category: "Debugging data modeling errors",
+    difficulty: "Advanced",
+    questionText: "A project on dbt Core 1.11 has an `on-run-start` hook that inserts a row into an audit table, and its `dbt_project.yml` sets no `flags:`. During `dbt run`, the hook fails because the audit table does not exist. What happens to the selected models?",
+    options: [
+      "They run as usual, and dbt reports the hook failure as an error in the run summary.",
+      "They are all skipped, because a failed `on-run-start` hook blocks every selected node.",
+      "dbt stops before any model starts, as it does for a parsing error, and prints no summary.",
+      "They run, and dbt retries the failed hook once, after the last model has finished."
+    ],
+    correctAnswers: [0],
+    explanation: "CORRECT ACTION:\nIn dbt Core 1.11, the behavior change flag `skip_nodes_if_on_run_start_fails` exists but is disabled by default; its default becomes `true` in dbt 1.12. With the default, a failed `on-run-start` hook is reported as an error, and the selected models still build: the run ends with `PASS=2 ERROR=1 SKIP=0`.\n\nINCORRECT COMPETING OPTIONS:\n- All models skipped: that is the behavior when `skip_nodes_if_on_run_start_fails: true` is set under `flags:`, which is not the 1.11 default.\n- Stopping before any model starts: the hook runs as its own step, the run continues, and the summary lists the hook failure.\n- Retrying the hook: dbt runs the hook once at the start of the run and does not run it again.",
+    references: "https://docs.getdbt.com/reference/global-configs/behavior-flags/skip_nodes_if_on_run_start_fails",
+    dbtVersionFocus: "Behavior change flags"
+  },
+  {
+    id: 128,
+    category: "Developing and optimizing dbt models",
+    difficulty: "Intermediate",
+    questionText: "`fct_customer_orders` selects from `{{ ref('stg_orders') }}` and `{{ ref('stg_customers') }}`. `stg_orders` is configured with `event_time: ordered_at`, and `stg_customers` has no `event_time`. Both are tables that are already built. You run `dbt run --select fct_customer_orders --sample=\"3 days\"`. Which input rows does `fct_customer_orders` read?",
+    options: [
+      "Rows of both models loaded in the last 3 days, based on when each table was last built",
+      "Rows of `stg_orders` with `ordered_at` in the last 3 days, and every row of `stg_customers`",
+      "No rows, because dbt fails when a ref read by a sampled model has no `event_time`",
+      "Every row of both models, because `--sample` filters on the selected model's own `event_time`"
+    ],
+    correctAnswers: [1],
+    explanation: "CORRECT ACTION:\nSample mode generates filtered refs and sources, and the filter uses the `event_time` of the model being referenced. dbt wraps `ref('stg_orders')` in a filter on `ordered_at` covering the last 3 days. `stg_customers` has no `event_time`, so its `ref` is left unfiltered and every row is read.\n\nINCORRECT COMPETING OPTIONS:\n- Rows loaded in the last 3 days: dbt filters on the column named in `event_time`, not on when a table was built.\n- Failing on a missing `event_time`: the run succeeds, and the ref without `event_time` is simply not sampled.\n- The selected model's own `event_time`: the filter applies to the refs the model reads; `fct_customer_orders` sets no `event_time`, and the ref to `stg_orders` is still filtered.",
+    references: "https://docs.getdbt.com/docs/build/sample-flag",
+    dbtVersionFocus: "Sample mode"
+  },
+  {
+    id: 131,
+    category: "Troubleshooting and optimizing dbt pipelines",
+    difficulty: "Intermediate",
+    questionText: "A production job on Postgres runs the command below with `threads: 2`. The selected models are independent of each other. `stg_events` fails with a division-by-zero error while `stg_sessions` is still running a long query. What does dbt do with `stg_sessions`?",
+    codeSnippet: `dbt run --fail-fast`,
+    codeLanguage: "bash",
+    options: [
+      "dbt cancels the query of `stg_sessions`, and `stg_sessions` is not built in this run.",
+      "dbt lets `stg_sessions` finish, then stops before it starts any other model.",
+      "dbt lets `stg_sessions` and the other models finish, because only children of `stg_events` are affected.",
+      "dbt retries `stg_events` once, and cancels `stg_sessions` only if that retry also fails."
+    ],
+    correctAnswers: [0],
+    explanation: "CORRECT ACTION:\n`--fail-fast` makes dbt exit immediately on the first failure. If other models are in progress when that failure happens, dbt terminates the connections for these still-running models. The query of `stg_sessions` is cancelled, and `run_results.json` records it as skipped with the message `Skipping due to fail_fast`.\n\nINCORRECT COMPETING OPTIONS:\n- Letting `stg_sessions` finish: dbt does not wait for running models; it terminates their connections.\n- Letting all independent models finish: that is the behaviour without `--fail-fast`, where only the children of the failed model are skipped.\n- Retrying `stg_events`: `--fail-fast` does not retry anything; it stops the run at the first failure.",
+    references: "https://docs.getdbt.com/reference/global-configs/failing-fast",
+    dbtVersionFocus: "Fail fast"
+  },
+  {
+    id: 132,
+    category: "Troubleshooting and optimizing dbt pipelines",
+    difficulty: "Intermediate",
+    questionText: "A team on Postgres runs the command below to give a developer a copy of production in their empty development schema. In the production manifest, `fct_orders` is an incremental model that exists as a table in the production schema. What does `dbt clone` create for `fct_orders` in the development schema?",
+    codeSnippet: `dbt clone --select fct_orders --state prod-artifacts`,
+    codeLanguage: "bash",
+    options: [
+      "A zero-copy clone of the production `fct_orders` table",
+      "A view that selects from the production `fct_orders` table",
+      "A new table built by running the `fct_orders` model SQL",
+      "An empty table with the columns of the production `fct_orders`"
+    ],
+    correctAnswers: [1],
+    explanation: "CORRECT ACTION:\n`dbt clone` creates a node as a clone only when the data platform supports zero-copy cloning of tables (Snowflake, Databricks or BigQuery) and the node exists as a table in the source environment. Otherwise it creates a simple pointer view, `select * from` the source object. Postgres has no zero-copy cloning, so `fct_orders` becomes a view on the production table.\n\nINCORRECT COMPETING OPTIONS:\n- Zero-copy clone: that applies only on platforms that support cloning tables, which Postgres is not.\n- Running the model SQL: `dbt clone` creates objects from the relations in the state manifest and does not run the model's SQL.\n- Empty table with the same columns: the pointer view returns the production rows, not an empty structure.",
+    references: "https://docs.getdbt.com/reference/commands/clone",
+    dbtVersionFocus: "dbt clone on platforms without zero-copy cloning"
+  },
+  {
+    id: 133,
+    category: "Troubleshooting and optimizing dbt pipelines",
+    difficulty: "Advanced",
+    questionText: "A developer's schema already holds a `dim_customers` table that they built last week from their own branch. They run the command below, where `prod-artifacts` holds the manifest of the latest production run, which includes `dim_customers`. What happens to the developer's `dim_customers`?",
+    codeSnippet: `dbt clone --state prod-artifacts`,
+    codeLanguage: "bash",
+    options: [
+      "dbt replaces it with a copy of the production `dim_customers`, and reports it as cloned.",
+      "dbt drops it and then fails the node, because the relation already exists.",
+      "dbt rebuilds it by running the `dim_customers` model SQL from the current branch.",
+      "dbt leaves it unchanged, and reports that the relation already exists."
+    ],
+    correctAnswers: [3],
+    explanation: "CORRECT ACTION:\nBy default, `dbt clone` does not recreate relations that already exist in the current target. The developer's table keeps last week's data, and the log shows that the relation already exists. Adding `--full-refresh` makes dbt recreate pre-existing relations from the state.\n\nINCORRECT COMPETING OPTIONS:\n- Replacing it with production: that happens only with `--full-refresh`.\n- Dropping it and failing: dbt neither drops the relation nor fails the node; the command completes successfully.\n- Rebuilding from the model SQL: `dbt clone` does not run model SQL; it creates objects from the relations in the state manifest.",
+    references: "https://docs.getdbt.com/reference/commands/clone",
+    dbtVersionFocus: "dbt clone and --full-refresh"
+  },
+  {
+    id: 134,
+    category: "Troubleshooting and optimizing dbt pipelines",
+    difficulty: "Intermediate",
+    questionText: "On Postgres, the table model `fct_daily_revenue` was built successfully by yesterday's run. Today's `dbt run` fails on this model with `division by zero`. A dashboard queries `fct_daily_revenue` right after the failure. What data does it see?",
+    options: [
+      "No rows, because dbt truncates the table before it runs the failing query.",
+      "An error, because dbt dropped the table before the failing query ran.",
+      "Yesterday's rows, because the failed build never replaced the existing table.",
+      "The rows computed before the error, because dbt commits each insert as it goes."
+    ],
+    correctAnswers: [2],
+    explanation: "CORRECT ACTION:\nOn Postgres, the `table` materialization creates the new table as `fct_daily_revenue__dbt_tmp` and renames it into place only after the query succeeds. When the query fails, the existing `fct_daily_revenue` is never touched, so the dashboard keeps reading yesterday's data. A failed run leaves stale data behind rather than an empty or missing table.\n\nINCORRECT COMPETING OPTIONS:\n- No rows after a truncate: dbt does not truncate the existing table; it builds a separate temporary relation.\n- An error because the table was dropped: the old table is replaced only after the new one has been built.\n- Partial rows: the failing statement creates no table at all, so no partial result is published.",
+    references: "https://docs.getdbt.com/docs/build/materializations",
+    dbtVersionFocus: "Partial results after a failed model"
+  },
+  {
+    id: 135,
+    category: "Troubleshooting and optimizing dbt pipelines",
+    difficulty: "Advanced",
+    questionText: "The `not_null` test on `stg_orders.order_id` is configured with `severity: warn`, and today it finds one null value. The model `fct_orders` selects from `stg_orders`. The production job runs the command below. What happens to `fct_orders`?",
+    codeSnippet: `dbt build --warn-error`,
+    codeLanguage: "bash",
+    options: [
+      "It is skipped, because the test's warning is promoted to an error, which blocks its children.",
+      "It is built, because `severity: warn` on the test takes precedence over the `--warn-error` flag.",
+      "It is built, because `--warn-error` applies only to warnings raised while dbt parses the project.",
+      "It is built, because in `dbt build` only tests on sources can block downstream models."
+    ],
+    correctAnswers: [0],
+    explanation: "CORRECT ACTION:\n`--warn-error` converts all dbt warnings into errors, including tests that are configured to return warnings. The `not_null` test is reported as a failure instead of a warning, and in `dbt build` a test failure skips the resources downstream of the tested model, so `fct_orders` is skipped. Without the flag, the same test reports `WARN 1` and `fct_orders` is built.\n\nINCORRECT COMPETING OPTIONS:\n- `severity: warn` taking precedence: the flag promotes the warning that this severity produces.\n- Parse-time warnings only: the flag's scope includes tests and freshness checks that return warnings.\n- Only source tests blocking: any test on an upstream resource that fails blocks its downstream resources.",
+    references: "https://docs.getdbt.com/reference/global-configs/warnings",
+    dbtVersionFocus: "--warn-error and skipped nodes"
+  },
+  {
+    id: 136,
+    category: "Leveraging the dbt state",
+    difficulty: "Advanced",
+    questionText: "A `dbt build` fails on `int_orders` and skips its child `fct_orders`; every other node succeeds. Before anyone fixes the model, a colleague runs `dbt compile` in the same project directory to inspect the SQL, and it completes successfully. You then fix `int_orders` and run `dbt retry`. What does `dbt retry` do?",
+    options: [
+      "It reruns `int_orders` and `fct_orders`, the nodes that errored or were skipped in the build.",
+      "It reruns the whole `dbt build`, because the last invocation was not a build command.",
+      "It recompiles `int_orders` only, because it retries the `dbt compile` invocation.",
+      "It runs nothing, because the latest `run_results.json` records a successful `dbt compile`."
+    ],
+    correctAnswers: [3],
+    explanation: "CORRECT ACTION:\n`dbt retry` re-executes the last invocation from the point of failure, and it reads `run_results.json` to determine where to start. `dbt compile` overwrote that file with its own results, in which every node succeeded. When the previously executed command completed successfully, retry finishes as a no operation, and dbt logs `Nothing to do`. `int_orders` and `fct_orders` stay unbuilt until you run them again with `dbt build` or `dbt run`.\n\nINCORRECT COMPETING OPTIONS:\n- Rerunning the errored and skipped nodes: that happens only when the failed build is still the last invocation recorded in `run_results.json`.\n- Rerunning the whole build: retry picks up from the point of failure of the last invocation instead of rerunning a full command.\n- Recompiling `int_orders`: the compile had no failures, so there is nothing to retry.",
+    references: "https://docs.getdbt.com/reference/commands/retry",
+    dbtVersionFocus: "dbt retry and run_results.json"
+  },
+  {
+    id: 137,
+    category: "Leveraging the dbt state",
+    difficulty: "Intermediate",
+    questionText: "A CI job runs `dbt build --select state:modified+ --state prod-artifacts`. In the pull request, a developer changes one value in `geo_lookup.csv`, a 2.3 MB seed, and one value in `order_statuses.csv`, a seed of a few bytes. Neither file is moved or renamed. Which seeds does `state:modified` select?",
+    options: [
+      "Both seeds, because dbt compares the contents of every seed file.",
+      "Only `order_statuses`, because dbt compares seeds of 1 MiB or more by file path only.",
+      "Only `geo_lookup`, because dbt compares small seeds by file path only.",
+      "Neither seed, because seeds are selected only when their YAML properties change."
+    ],
+    correctAnswers: [1],
+    explanation: "CORRECT ACTION:\ndbt stores a file hash only for seed files under 1 MiB, so a change to the contents of `order_statuses.csv` marks it modified. For a seed over 1 MiB, dbt cannot compare contents, raises a warning, and uses only the file path to detect changes. `geo_lookup.csv` kept its path, so it is not selected.\n\nINCORRECT COMPETING OPTIONS:\n- Comparing every seed's contents: dbt hashes only seeds under 1 MiB.\n- Comparing small seeds by path: it is the other way round; large seeds are compared by path and small seeds by contents.\n- YAML properties only: a content change to a small seed is enough for `state:modified`.",
+    references: "https://docs.getdbt.com/reference/node-selection/state-comparison-caveats",
+    dbtVersionFocus: "State comparison for seeds"
+  },
+  {
+    id: 138,
+    category: "Leveraging the dbt state",
+    difficulty: "Advanced",
+    questionText: "The model `fct_orders` filters on `{{ var('start_date') }}`, and `dbt_project.yml` sets `start_date: '2026-01-01'`. The production manifest in `prod-artifacts` was produced with that default. With no file changed in the project, a CI job runs the command below. What is the result?",
+    codeSnippet: `dbt build --select state:modified+ --state prod-artifacts --vars '{"start_date": "2026-10-01"}'`,
+    codeLanguage: "bash",
+    options: [
+      "dbt selects `fct_orders`, because its compiled SQL differs from the production run.",
+      "dbt selects every model, because passing `--vars` invalidates the comparison manifest.",
+      "dbt selects no nodes, because a changed `var` value does not mark the model as modified.",
+      "dbt raises an error, because `--vars` cannot be combined with `state:` selection."
+    ],
+    correctAnswers: [2],
+    explanation: "CORRECT ACTION:\nWhen a model uses a `var` or `env_var` in its definition, dbt cannot detect that the model changed because the variable's value changed. The model's code is the same as in the production manifest, so `state:modified+` matches nothing and dbt reports that there is nothing to do, even though the compiled SQL now filters on `2026-10-01`.\n\nINCORRECT COMPETING OPTIONS:\n- Selecting `fct_orders` because compiled SQL differs: state comparison does not include the changed `var` value in the model's definition.\n- Selecting every model: `--vars` does not invalidate the comparison; the manifest is still used and nothing differs.\n- Raising an error: `--vars` and `state:` selection can be combined; the command completes with nothing selected.",
+    references: "https://docs.getdbt.com/reference/node-selection/state-comparison-caveats",
+    dbtVersionFocus: "State comparison and vars"
+  },
+  {
+    id: 139,
+    category: "Troubleshooting and optimizing dbt pipelines",
+    difficulty: "Basic",
+    questionText: "An orchestrator runs `dbt build` and decides what to do next from dbt's exit code. Tonight one model fails with a database error, its two children are skipped, and every other node succeeds. Which exit code does dbt return?",
+    options: [
+      "`0`, because the invocation ran to the end and only some models were skipped",
+      "`1`, because the invocation completed with at least one handled error",
+      "`2`, because a database error counts as an unhandled error",
+      "`3`, because dbt reports runs with skipped models with their own exit code"
+    ],
+    correctAnswers: [1],
+    explanation: "CORRECT ACTION:\ndbt returns `1` when the invocation completed with at least one handled error, such as a model syntax error or bad permissions; the run was completed, but some models may have been skipped. A failed model with skipped children is exactly that case.\n\nINCORRECT COMPETING OPTIONS:\n- `0`: dbt returns it only when the invocation completes successfully; a failed model makes the invocation end with an error code.\n- `2`: it is reserved for unhandled errors such as ctrl-c or a network interruption.\n- `3`: dbt returns only `0`, `1` or `2`, and skipped models do not have a separate code.",
+    references: "https://docs.getdbt.com/reference/exit-codes",
+    dbtVersionFocus: "Exit codes"
+  },
+  {
+    id: 141,
+    category: "Implementing and maintaining external dependencies",
+    difficulty: "Basic",
+    questionText: "A dbt Core 1.11 job runs `dbt source freshness`. A later job must read the freshness results of this run, including each source's `max_loaded_at`, to select sources that received new data. Which file in the `target/` directory holds these results?",
+    options: [
+      "`target/run_results.json`",
+      "`target/manifest.json`",
+      "`target/sources.json`",
+      "`target/freshness.json`"
+    ],
+    correctAnswers: [2],
+    explanation: "CORRECT ACTION:\n`dbt source freshness` writes its results to `target/sources.json`. The file holds the status, execution times and `max_loaded_at` of each checked source table, and later invocations can read it, for example with the `source_status` selector.\n\nINCORRECT COMPETING OPTIONS:\n- `target/run_results.json`: in dbt Core 1.11, `dbt source freshness` does not write `run_results.json`; the freshness results go to `sources.json`.\n- `target/manifest.json`: the command writes a manifest too, but the freshness results that later invocations read, with each source's status and `max_loaded_at`, are in `sources.json`.\n- `target/freshness.json`: dbt Core 1.11 does not write this file when it runs `dbt source freshness`.",
+    references: "https://docs.getdbt.com/reference/node-selection/configure-state",
+    dbtVersionFocus: "Source freshness (artifacts)"
+  },
+  {
+    id: 142,
+    category: "Implementing and maintaining external dependencies",
+    difficulty: "Intermediate",
+    questionText: "In a dbt Core 1.11 project named `sandbox`, `dbt_project.yml` sets a default freshness for its sources, and the source YAML sets only `loaded_at_field`, as shown below. The newest `loaded_at` value in `orders` is 2 hours old. What does `dbt source freshness` report for `orders`?",
+    codeSnippet: `# dbt_project.yml
+sources:
+  sandbox:
+    +freshness:
+      warn_after: {count: 1, period: hour}
+
+# models/sources.yml
+sources:
+  - name: shop
+    config:
+      loaded_at_field: loaded_at
+    tables:
+      - name: orders`,
+    codeLanguage: "yaml",
+    options: [
+      "`PASS`, because freshness set in `dbt_project.yml` is not applied to sources.",
+      "`ERROR STALE`, because without `error_after` any breach is reported as an error.",
+      "No result, because `orders` has no `freshness` block in its own YAML entry.",
+      "`WARN`, because the `+freshness` set in `dbt_project.yml` applies to `orders`."
+    ],
+    correctAnswers: [3],
+    explanation: "CORRECT ACTION:\n`freshness` can be set for sources in `dbt_project.yml` under `sources:` with the `+` prefix, and it applies to every source table in that resource path. `orders` inherits `warn_after` of 1 hour and its `loaded_at_field` from the YAML, so data 2 hours old is reported as `WARN`.\n\nINCORRECT COMPETING OPTIONS:\n- `PASS` because project-level freshness is ignored: the project-level `+freshness` is applied, and 2 hours exceeds the 1-hour `warn_after`.\n- `ERROR STALE` without `error_after`: one or both thresholds can be set, and breaching only `warn_after` produces a warning.\n- No result without a YAML `freshness` block: the table inherits the freshness configured in `dbt_project.yml`, so dbt checks it.",
+    references: "https://docs.getdbt.com/reference/resource-configs/freshness",
+    dbtVersionFocus: "Source freshness (project-level config)"
+  },
+  {
+    id: 143,
+    category: "Implementing and maintaining external dependencies",
+    difficulty: "Advanced",
+    questionText: "A project on Postgres declares the source below. Both tables receive new rows every hour. What happens when you run `dbt source freshness`?",
+    codeSnippet: `sources:
+  - name: shop
+    config:
+      freshness:
+        warn_after: {count: 12, period: hour}
+        error_after: {count: 24, period: hour}
+    tables:
+      - name: orders
+        config:
+          loaded_at_field: loaded_at
+      - name: events`,
+    codeLanguage: "yaml",
+    options: [
+      "`orders` passes; `events` passes, because dbt reads its last-modified time from Postgres metadata.",
+      "`orders` passes; `events` errors, because Postgres cannot compute freshness without `loaded_at_field`.",
+      "`orders` passes; `events` is left out of the results, with no warning or error reported.",
+      "Both tables error, because `loaded_at_field` must be set at the source level to apply to tables."
+    ],
+    correctAnswers: [1],
+    explanation: "CORRECT ACTION:\nWithout `loaded_at_field`, dbt can compute freshness only from warehouse metadata, and the Postgres adapter does not support metadata-based freshness. dbt reports a runtime error for `events`: no `loaded_at_field` provided and the adapter does not support metadata-based freshness checks. `orders` has a `loaded_at_field` and recent data, so it passes.\n\nINCORRECT COMPETING OPTIONS:\n- `events` passes from Postgres metadata: metadata-based freshness is available only on adapters that support it, and Postgres does not.\n- `events` left out of the results: dbt runs the check for `events` because it inherits a `freshness` block, and reports an error for it.\n- Both tables error: `loaded_at_field` can be set on a single table, and `orders` is checked with its own `loaded_at_field`.",
+    references: "https://docs.getdbt.com/docs/build/sources",
+    dbtVersionFocus: "Source freshness (loaded_at_field)"
+  },
+  {
+    id: 144,
+    category: "Implementing and maintaining external dependencies",
+    difficulty: "Intermediate",
+    questionText: "Your project defines many exposures in YAML files under `models/`. You want to set one exposure property for all of them at once in `dbt_project.yml`, under the `exposures:` key. In dbt Core 1.11, which setting takes effect there?",
+    options: [
+      "`+enabled`",
+      "`+maturity`",
+      "`+owner`",
+      "`+type`"
+    ],
+    correctAnswers: [0],
+    explanation: "CORRECT ACTION:\nExposure properties are special properties that must be set in the exposure's YAML entry. The only project-level config that `dbt_project.yml` supports for exposures under `exposures:` is `enabled`, for example `+enabled: false` to disable them.\n\nINCORRECT COMPETING OPTIONS:\n- `+maturity`: maturity is an exposure property set in YAML; a project-level `+maturity` does not change the exposure's `maturity`.\n- `+owner`: the owner is a required exposure property declared in the exposure's YAML entry.\n- `+type`: the type is a required exposure property declared in the exposure's YAML entry.",
+    references: "https://docs.getdbt.com/reference/exposure-properties",
+    dbtVersionFocus: "Exposures (project-level configs)"
+  },
+  {
+    id: 145,
+    category: "Developing and optimizing dbt models",
+    difficulty: "Intermediate",
+    questionText: "On DuckDB, a Python model sets its materialization as shown below. What happens when you run `dbt run --select customer_scores`?",
+    codeSnippet: `def model(dbt, session):
+    dbt.config(materialized="view")
+    customers = dbt.ref("stg_customers")
+    return customers.filter("id > 1")`,
+    codeLanguage: "python",
+    options: [
+      "dbt creates a view whose definition runs the Python code each time the view is queried.",
+      "dbt ignores the setting and builds a table, because `table` is the default for Python models.",
+      "The model fails with an error, because the `view` materialization supports only SQL models.",
+      "dbt builds nothing and inlines the Python result into downstream models as a CTE."
+    ],
+    correctAnswers: [2],
+    explanation: "CORRECT ACTION:\nPython models support only the `table` and `incremental` materializations; they can't be materialized as `view` or `ephemeral`. dbt fails the model with a runtime error stating that the view materialization only supports the `sql` language.\n\nINCORRECT COMPETING OPTIONS:\n- A view that runs the Python code: the `view` materialization rejects Python models, so no view is created.\n- Falling back to a table: `table` is the default only when no materialization is set; an explicit `view` is not replaced, it fails.\n- Inlining as a CTE: that is the `ephemeral` behaviour of SQL models, and Python models can't be ephemeral either.",
+    references: "https://docs.getdbt.com/docs/build/python-models",
+    dbtVersionFocus: "Python models (materializations)"
+  },
+  {
+    id: 146,
+    category: "Developing and optimizing dbt models",
+    difficulty: "Intermediate",
+    questionText: "On Postgres, `dbt_project.yml` and the table model `fct_payments` configure grants as shown below. The roles `analyst`, `bi` and `finance` exist. After `dbt run`, which roles hold the `select` privilege on `fct_payments`?",
+    codeSnippet: `# dbt_project.yml
+models:
+  +materialized: table
+  +grants:
+    select: ['analyst', 'bi']
+
+-- models/fct_payments.sql
+{{ config(grants={'select': ['finance']}) }}
+select * from {{ ref('stg_payments') }}`,
+    codeLanguage: "yaml",
+    options: [
+      "`analyst`, `bi` and `finance`",
+      "`finance` only",
+      "`analyst` and `bi` only",
+      "None, until `dbt run-operation` runs"
+    ],
+    correctAnswers: [1],
+    explanation: "CORRECT ACTION:\nWhen `grants` is set in several places, the more specific config replaces the grantees of the less specific one for each privilege. The model-level `select: ['finance']` replaces the project-level list, so only `finance` receives `select`. To add `finance` to the inherited grantees instead, the model would use the key `+select`.\n\nINCORRECT COMPETING OPTIONS:\n- `analyst`, `bi` and `finance`: grantees are combined only when the privilege key has the `+` prefix, which this model does not use.\n- `analyst` and `bi` only: the model's own config is more specific than `dbt_project.yml`, so it wins.\n- None until `dbt run-operation` runs: dbt runs the `grant` statements itself when the model is built.",
+    references: "https://docs.getdbt.com/reference/resource-configs/grants",
+    dbtVersionFocus: "Grants (config inheritance)"
+  },
+  {
+    id: 147,
+    category: "Developing and optimizing dbt models",
+    difficulty: "Intermediate",
+    questionText: "A snapshot on Postgres uses the configuration below. After the first `dbt snapshot`, the row with `id = 2` is deleted from the source table. What does the next `dbt snapshot` do for `id = 2`?",
+    codeSnippet: `snapshots:
+  - name: customers_snapshot
+    relation: source('crm', 'customers')
+    config:
+      unique_key: id
+      strategy: timestamp
+      updated_at: updated_at
+      hard_deletes: new_record`,
+    codeLanguage: "yaml",
+    options: [
+      "It sets `dbt_valid_to` on the row and adds no new row.",
+      "It leaves the row unchanged, with `dbt_valid_to` still null.",
+      "It deletes the row for `id = 2` from the snapshot table.",
+      "It closes the row and adds a row where `dbt_is_deleted` is `True`."
+    ],
+    correctAnswers: [3],
+    explanation: "CORRECT ACTION:\n`hard_deletes: new_record` tracks deletions as new rows. dbt sets `dbt_valid_to` on the current row for `id = 2` and inserts a new row whose `dbt_is_deleted` column is `True`. The setting adds the `dbt_is_deleted` meta column to the snapshot table.\n\nINCORRECT COMPETING OPTIONS:\n- Setting `dbt_valid_to` with no new row: this is `hard_deletes: invalidate`.\n- Leaving the row unchanged: this is `hard_deletes: ignore`, the default.\n- Deleting the row from the snapshot: no `hard_deletes` option removes history from the snapshot table.",
+    references: "https://docs.getdbt.com/reference/resource-configs/hard-deletes",
+    dbtVersionFocus: "Snapshots (hard_deletes, v1.9+)"
+  },
+  {
+    id: 148,
+    category: "Developing and optimizing dbt models",
+    difficulty: "Advanced",
+    questionText: "On Postgres, the incremental model below loads app events. Upstream, a whole day of events can be reprocessed: rows of that day change and new rows are added. Each run reselects every row from the latest loaded day onwards, and many rows share each `event_date`. Which `incremental_strategy` replaces the rows of each reselected day without duplicates?",
+    codeSnippet: `{{ config(materialized='incremental', unique_key='event_date') }}
+
+select event_date, event_id, amount
+from {{ source('app', 'events') }}
+{% if is_incremental() %}
+where event_date >= (select max(event_date) from {{ this }})
+{% endif %}`,
+    codeLanguage: "sql",
+    options: [
+      "`delete+insert`",
+      "`merge`",
+      "`append`",
+      "`insert_overwrite`"
+    ],
+    correctAnswers: [0],
+    explanation: "CORRECT ACTION:\n`delete+insert` deletes the target rows whose `unique_key` matches the new data and then inserts the new rows. With `unique_key='event_date'`, every row of a reselected day is removed and replaced, which suits a key that is not unique per row.\n\nINCORRECT COMPETING OPTIONS:\n- `merge`: many new rows share each `event_date`, so the `MERGE` would update the same target row more than once, and Postgres fails the run with `MERGE command cannot affect row a second time`.\n- `append`: it inserts the reselected rows without deleting the old ones, so the reprocessed day is duplicated.\n- `insert_overwrite`: dbt-postgres does not support it, and the run fails with `The incremental strategy 'insert_overwrite' is not valid for this adapter`.",
+    references: "https://docs.getdbt.com/docs/build/incremental-strategy",
+    dbtVersionFocus: "Incremental strategies (choosing one)"
+  },
+  {
+    id: 149,
+    category: "Developing and optimizing dbt models",
+    difficulty: "Intermediate",
+    questionText: "The microbatch model below already exists in the warehouse. A scheduled `dbt run` of the model starts on 2026-11-09 (UTC), and the run is not a full refresh. Which batches does it process?",
+    codeSnippet: `{{ config(
+    materialized='incremental',
+    incremental_strategy='microbatch',
+    event_time='viewed_at',
+    unique_key='view_id',
+    begin='2026-11-01',
+    batch_size='day',
+    lookback=2
+) }}
+
+select view_id, viewed_at
+from {{ source('app', 'page_views') }}`,
+    codeLanguage: "sql",
+    options: [
+      "Only the batch for 2026-11-09",
+      "The batches for 2026-11-08 and 2026-11-09",
+      "Every daily batch from 2026-11-01 through 2026-11-09",
+      "The batches for 2026-11-07, 2026-11-08 and 2026-11-09"
+    ],
+    correctAnswers: [3],
+    explanation: "CORRECT ACTION:\nOn a standard incremental run, dbt picks batches from the current timestamp and the `lookback`, with one query per batch. With `batch_size='day'`, it processes the current day plus `lookback=2` earlier days: 2026-11-07, 2026-11-08 and 2026-11-09.\n\nINCORRECT COMPETING OPTIONS:\n- Only 2026-11-09: that would be `lookback=0`; the configured `lookback` adds earlier batches to catch late-arriving records.\n- 2026-11-08 and 2026-11-09: this is the default `lookback` of 1, but the model sets 2.\n- Every batch from `begin`: dbt starts from `begin` when the model is first built, not on a standard incremental run of an existing model.",
+    references: "https://docs.getdbt.com/reference/resource-configs/lookback",
+    dbtVersionFocus: "Microbatch (lookback)"
   }
 ];

@@ -28,7 +28,11 @@ import {
 } from "lucide-react";
 import { Answer, Question, ExamMode, ExamSession, QuestionFormat } from "./types";
 import { allQuestions as examQuestions } from "./questionBank";
-import DbtMeshVisualizer from "./components/DbtMeshVisualizer";
+import { CATEGORIES, EXAM_TOPICS, topicOf } from "./examTopics";
+import { evidence } from "./evidence";
+import { DoubtfulMarks, loadDoubtful, saveDoubtful, toggleDoubtful } from "./doubtful";
+import EvidenceBlock from "./components/EvidenceBlock";
+import DoubtfulToggle from "./components/DoubtfulToggle";
 import FormattedText, { FormattedExplanation } from "./components/FormattedText";
 import QuestionBody from "./components/questions/QuestionBody";
 import {
@@ -56,7 +60,7 @@ type Screen = "WELCOME" | "EXAM" | "RESULT";
 const MODE_LABELS: Record<ExamMode, string> = {
   MOCK_EXAM: "Full Mock Exam",
   QUICK_QUIZ: "Quick Practice Quiz",
-  DOMAIN_PRACTICE: "Domain Targeted",
+  DOMAIN_PRACTICE: "Topic Practice",
 };
 
 const slugify = (value: string) => value.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
@@ -95,7 +99,6 @@ export default function App() {
 
   // Global settings
   const [isPracticeMode, setIsPracticeMode] = useState<boolean>(true); // Practice mode allows checking answers instantly
-  const [activeTab, setActiveTab] = useState<"overview" | "develop" | "debug" | "test" | "deploy">("overview");
   const [isPaused, setIsPaused] = useState(false);
   const [userCheckedCurrent, setUserCheckedCurrent] = useState(false); // In practice mode, has user checked answer on current Q?
   const [isFullscreen, setIsFullscreen] = useState(false);
@@ -272,37 +275,8 @@ export default function App() {
     ].join(":");
   };
 
-  // Convert category names to shortened tags
-  const getCategoryShortTag = (category: string) => {
-    switch (category) {
-      case "Develop Models":
-        return "Develop";
-      case "Debug Data Models":
-        return "Debug";
-      case "Test and Document Models":
-        return "Test & Doc";
-      case "Deploy dbt Projects":
-        return "Deploy";
-      default:
-        return category;
-    }
-  };
-
-  // Setup dynamic color categories
-  const getCategoryColorStyles = (category: string) => {
-    switch (category) {
-      case "Develop Models":
-        return "bg-teal-50 text-teal-800 border-teal-200";
-      case "Debug Data Models":
-        return "bg-amber-50 text-amber-800 border-amber-200";
-      case "Test and Document Models":
-        return "bg-purple-50 text-purple-800 border-purple-200";
-      case "Deploy dbt Projects":
-        return "bg-blue-50 text-blue-800 border-blue-200";
-      default:
-        return "bg-gray-50 text-gray-800 border-gray-200";
-    }
-  };
+  const getCategoryShortTag = (category: string) => topicOf(category)?.short ?? category;
+  const getCategoryColorStyles = (category: string) => topicOf(category)?.color ?? "bg-gray-50 text-gray-800 border-gray-200";
 
   // Graded-answer history across sessions; drives which questions practice modes pick.
   const [answerHistory, setAnswerHistory] = useState<AnswerHistory>(() => loadHistory());
@@ -319,11 +293,25 @@ export default function App() {
     });
   };
 
+  // Questions marked doubtful in this browser; left out of new sessions.
+  const [doubtful, setDoubtful] = useState<DoubtfulMarks>(() => loadDoubtful());
+  const toggleDoubtfulMark = (questionId: number) => {
+    setDoubtful((prev) => {
+      const next = toggleDoubtful(prev, questionId);
+      saveDoubtful(next);
+      return next;
+    });
+  };
+  const doubtfulIds = Object.keys(doubtful).map(Number);
+
+  // Questions served in sessions: those with documented evidence for their key, minus doubtful ones.
+  const studyBank = useMemo(() => examQuestions.filter((q) => evidence[q.id] && !doubtful[q.id]), [doubtful]);
+
   const progressCounts = useMemo(() => {
     const counts = { correct: 0, wrong: 0, unseen: 0 };
-    examQuestions.forEach((q) => counts[statusOf(answerHistory, q.id)]++);
+    studyBank.forEach((q) => counts[statusOf(answerHistory, q.id)]++);
     return counts;
-  }, [answerHistory]);
+  }, [answerHistory, studyBank]);
 
   const resetAnswerHistory = () => {
     if (!confirm("Clear your answer history? Practice quizzes will treat every question as unseen.")) return;
@@ -337,14 +325,14 @@ export default function App() {
 
     if (mode === "MOCK_EXAM") {
       // 65 questions in the real exam's mix of formats and domains.
-      selectedQuestionsList = pickMockExam(examQuestions);
+      selectedQuestionsList = pickMockExam(studyBank);
       setTimeLeft(120 * 60); // 120 minutes (7,200 seconds) countdown
     } else if (mode === "QUICK_QUIZ") {
-      selectedQuestionsList = pickPracticeQuestions(examQuestions, answerHistory, shuffle, 10);
+      selectedQuestionsList = pickPracticeQuestions(studyBank, answerHistory, shuffle, 10);
       setTimeLeft(0); // For practice, counts UP
     } else if (mode === "DOMAIN_PRACTICE" && domainFilter) {
       selectedQuestionsList = pickPracticeQuestions(
-        examQuestions.filter((q) => q.category === domainFilter),
+        studyBank.filter((q) => q.category === domainFilter),
         answerHistory,
         shuffle
       );
@@ -499,36 +487,26 @@ export default function App() {
             <div>
               <div className="flex items-center gap-3 mb-2">
                 <span className="px-3 py-1 bg-[#FF694B] text-white text-xs font-bold uppercase tracking-wider rounded">Unofficial</span>
-                <span className="px-3 py-1 bg-[#1A1A1A] text-white text-xs font-mono rounded">v1.10 & v1.11 Core Spec</span>
+                <span className="px-3 py-1 bg-[#1A1A1A] text-white text-xs font-mono rounded">dbt Core 1.11</span>
               </div>
               <h1 className="text-3xl font-bold tracking-tight text-gray-900 sm:text-4xl">
-                Analytics Engineering Certification Exam Simulator
+                dbt Analytics Engineering exam prep
               </h1>
               <p className="mt-2 text-md text-gray-600 max-w-3xl select-text">
-                <FormattedText text="Master the official certified developer curriculum with real-world case simulations. Fully updated for the crucial syllabus modifications focusing on **dbt Mesh, Semantic Layer, Model Contracts, and v1.11 Unit Testing & Microbatch Incremental Strategy**." />
+                Practice questions for the dbt Analytics Engineering Certification exam. A personal project, not affiliated with or endorsed by dbt Labs.
               </p>
             </div>
 
-            {/* Quick Full Screen & Standalone Controls */}
+            {/* Full screen control */}
             <div className="flex items-center gap-2.5 self-start md:self-center shrink-0">
               <button
                 onClick={toggleFullscreen}
                 className="px-3.5 py-2 bg-white border border-gray-300 hover:border-gray-400 hover:bg-gray-50 text-gray-700 rounded-lg text-xs font-semibold flex items-center gap-2 shadow-xs cursor-pointer transition-colors"
-                title={isFullscreen ? "Exit Fullscreen" : "Toggle Fullscreen Kiosk Mode"}
+                title={isFullscreen ? "Exit Fullscreen" : "Full screen"}
               >
                 {isFullscreen ? <Minimize2 className="w-3.5 h-3.5" /> : <Maximize2 className="w-3.5 h-3.5" />}
                 <span>{isFullscreen ? "Exit Fullscreen" : "Full Screen"}</span>
               </button>
-              <a
-                href={typeof window !== "undefined" ? window.location.href : "#"}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="px-3.5 py-2 bg-[#1A1A1A] hover:bg-[#FF694B] text-white rounded-lg text-xs font-semibold flex items-center gap-2 shadow-xs cursor-pointer transition-colors"
-                title="Open standalone app in a separate browser tab"
-              >
-                <ExternalLink className="w-3.5 h-3.5" />
-                <span>Open in Tab</span>
-              </a>
             </div>
           </div>
 
@@ -561,7 +539,7 @@ export default function App() {
                       {progressCounts.unseen} not answered yet
                     </span>
                   </div>
-                  {progressCounts.unseen < examQuestions.length && (
+                  {progressCounts.unseen < studyBank.length && (
                     <button
                       onClick={resetAnswerHistory}
                       className="text-[11px] font-semibold text-gray-500 hover:text-red-600 cursor-pointer transition-colors self-start sm:self-auto"
@@ -570,6 +548,24 @@ export default function App() {
                     </button>
                   )}
                 </div>
+
+                {doubtfulIds.length > 0 && (
+                  <div className="-mt-3 mb-6 px-4 py-3 bg-amber-50 rounded-xl border border-amber-100 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs text-amber-900">
+                    <span>
+                      <strong>{doubtfulIds.length}</strong> question{doubtfulIds.length === 1 ? "" : "s"} marked doubtful and left out of sessions: {doubtfulIds.sort((a, b) => a - b).join(", ")}
+                    </span>
+                    <button
+                      onClick={() => {
+                        if (!confirm("Bring every doubtful question back into sessions?")) return;
+                        saveDoubtful({});
+                        setDoubtful({});
+                      }}
+                      className="text-[11px] font-semibold text-amber-800 hover:text-amber-950 cursor-pointer self-start sm:self-auto"
+                    >
+                      Clear marks
+                    </button>
+                  </div>
+                )}
 
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
                   
@@ -587,7 +583,7 @@ export default function App() {
                       </div>
                       <h3 className="font-bold text-gray-900 text-md mb-1">Full Mock Exam</h3>
                       <p className="text-xs text-gray-600 leading-relaxed mb-4">
-                        {MOCK_EXAM_SIZE} questions in the exam's mix of formats and domains, under a 120-minute countdown. No answer hints during the test.
+                        {MOCK_EXAM_SIZE} questions in the exam's mix of formats, across all seven topics, under a 120-minute countdown. No answer hints during the test.
                       </p>
                     </div>
                     <button
@@ -633,9 +629,9 @@ export default function App() {
                           Untimed
                         </span>
                       </div>
-                      <h3 className="font-bold text-gray-900 text-md mb-1">Domain Targeted</h3>
+                      <h3 className="font-bold text-gray-900 text-md mb-1">Topic Practice</h3>
                       <p className="text-xs text-gray-600 leading-relaxed mb-4">
-                        One exam domain, untimed. Covers the domain's questions you have not answered yet or got wrong last time.
+                        One of the seven exam topics, untimed. Covers the topic's questions you have not answered yet or got wrong last time.
                       </p>
                     </div>
                     
@@ -646,11 +642,12 @@ export default function App() {
                         defaultValue=""
                         className="w-full px-3 py-2 text-xs border border-gray-300 rounded-lg focus:outline-none focus:border-[#FF694B] bg-white cursor-pointer"
                       >
-                        <option value="" disabled>Choose Category...</option>
-                        <option value="Develop Models">Develop Models (37%)</option>
-                        <option value="Debug Data Models">Debug Data Models (22%)</option>
-                        <option value="Test and Document Models">Test & Document (23%)</option>
-                        <option value="Deploy dbt Projects">Deploy Projects (18%)</option>
+                        <option value="" disabled>Choose a topic...</option>
+                        {EXAM_TOPICS.map((t, i) => (
+                          <option key={t.name} value={t.name}>
+                            {i + 1}. {t.name}
+                          </option>
+                        ))}
                       </select>
                     </div>
                   </div>
@@ -681,188 +678,75 @@ export default function App() {
                 </div>
               </div>
 
-              {/* Syllabus Changes Accordion Box */}
+              {/* Official exam outline */}
               <div className="bg-white rounded-2xl border border-gray-200 p-6 md:p-8 shadow-sm">
                 <div className="flex items-center gap-3.5 mb-6">
                   <div className="w-10 h-10 bg-gray-900 text-white flex items-center justify-center rounded-xl font-bold text-sm">
                     dbt
                   </div>
                   <div>
-                    <h2 className="text-lg font-bold text-gray-900">May 20th Exam Syllabus Guide</h2>
-                    <p className="text-xs text-gray-500">Major core structural changes and subject weighting modifications</p>
+                    <h2 className="text-lg font-bold text-gray-900">Exam guide (dbt Core 1.11)</h2>
+                    <p className="text-xs text-gray-500">
+                      Based on the{" "}
+                      <a
+                        href="https://www.getdbt.com/dbt-assets/certifications/dbt-certificate-study-guide-version-1-11"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-[#FF694B] hover:underline"
+                      >
+                        official dbt Labs study guide
+                      </a>
+
+                      , which lists what each topic covers. dbt Labs publishes no weight per topic.
+                    </p>
                   </div>
                 </div>
 
-                {/* Tab selections */}
-                <div className="flex flex-wrap border-b border-gray-200 gap-1 mb-6">
-                  <button
-                    onClick={() => setActiveTab("overview")}
-                    className={`px-4 py-2 text-xs font-bold uppercase border-b-2 tracking-wider ${
-                      activeTab === "overview"
-                        ? "border-[#FF694B] text-[#FF694B]"
-                        : "border-transparent text-gray-500 hover:text-gray-900"
-                    }`}
-                  >
-                    Weight Changes
-                  </button>
-                  <button
-                    onClick={() => setActiveTab("develop")}
-                    className={`px-4 py-2 text-xs font-bold uppercase border-b-2 tracking-wider ${
-                      activeTab === "develop"
-                        ? "border-teal-500 text-teal-600"
-                        : "border-transparent text-gray-500 hover:text-teal-500"
-                    }`}
-                  >
-                    Develop (37%)
-                  </button>
-                  <button
-                    onClick={() => setActiveTab("debug")}
-                    className={`px-4 py-2 text-xs font-bold uppercase border-b-2 tracking-wider ${
-                      activeTab === "debug"
-                        ? "border-amber-500 text-amber-600"
-                        : "border-transparent text-gray-500 hover:text-amber-500"
-                    }`}
-                  >
-                    Debug (22%)
-                  </button>
-                  <button
-                    onClick={() => setActiveTab("test")}
-                    className={`px-4 py-2 text-xs font-bold uppercase border-b-2 tracking-wider ${
-                      activeTab === "test"
-                        ? "border-purple-500 text-purple-600"
-                        : "border-transparent text-gray-500 hover:text-purple-500"
-                    }`}
-                  >
-                    Test & Doc (23%)
-                  </button>
-                  <button
-                    onClick={() => setActiveTab("deploy")}
-                    className={`px-4 py-2 text-xs font-bold uppercase border-b-2 tracking-wider ${
-                      activeTab === "deploy"
-                        ? "border-blue-500 text-blue-600"
-                        : "border-transparent text-gray-500 hover:text-blue-500"
-                    }`}
-                  >
-                    Deploy (18%)
-                  </button>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6 text-xs">
+                  {[
+                    ["Questions", "65, some unscored"],
+                    ["Time", "2 hours"],
+                    ["Pass mark", "65%"],
+                    ["Score", "Shown on submit"],
+                  ].map(([label, value]) => (
+                    <div key={label} className="p-3 bg-gray-50 rounded-lg border border-gray-100">
+                      <p className="text-[10px] uppercase font-bold tracking-wider text-gray-400">{label}</p>
+                      <p className="font-semibold text-gray-900 mt-0.5">{value}</p>
+                    </div>
+                  ))}
                 </div>
 
-                {/* Tab content panel */}
-                <div className="min-h-56">
-                  {activeTab === "overview" && (
-                    <div className="space-y-4 text-xs leading-relaxed text-gray-600">
-                      <p>
-                        On <strong>May 20, 2026</strong>, dbt Labs officially sunsetted the outdated Analytics Engineering syllabus, 
-                        fully aligning the certification with **dbt-core versions 1.10 & 1.11**, 
-                        refocusing heavily on platform maturity, model governance, development patterns, and the **dbt Mesh**.
-                      </p>
-                      
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
-                        <div className="p-4 bg-gray-50 rounded-xl border border-gray-100">
-                          <p className="font-bold text-gray-900 mb-2 uppercase tracking-wide text-[10px]">Outdated Schema Weightings</p>
-                          <ul className="space-y-1.5 list-disc pl-4 text-gray-500">
-                            <li>Building dbt Models (24%)</li>
-                            <li>Debugging Models (20%)</li>
-                            <li>Testing and Documenting (23%)</li>
-                            <li>Deploying Models (33%)</li>
-                          </ul>
-                        </div>
-                        <div className="p-4 bg-[#FFF5F2] rounded-xl border border-[#FF694B]/20">
-                          <p className="font-bold text-[#FF694B] mb-2 uppercase tracking-wide text-[10px]">NEW Post-May 20th Weightings</p>
-                          <ul className="space-y-1.5 list-disc pl-4 text-gray-700">
-                            <li><strong>Develop Models (37%)</strong> - Significant Increase!</li>
-                            <li><strong>Debug Data Models (22%)</strong></li>
-                            <li><strong>Test and Document Models (23%)</strong></li>
-                            <li><strong>Deploy dbt Projects (18%)</strong> - Consensual Streamlining!</li>
-                          </ul>
-                        </div>
-                      </div>
-                      
-                      <div className="flex items-start gap-2.5 p-3.5 bg-amber-50 text-amber-900 border border-amber-100 rounded-lg text-xs leading-relaxed mt-4">
-                        <AlertCircle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
-                        <p>
-                          Our questions are written specifically against the modern specification. 
-                          You will encounter scenarios on cross-project refs, public vs private schemas, config-driven model versioning, unit test blocks, and dynamic state-modified Slim CI jobs.
-                        </p>
-                      </div>
-                    </div>
-                  )}
+                <p className="text-xs text-gray-600 mb-2">
+                  <strong>Question formats:</strong> multiple choice, fill-in-the-blank, matching, hotspot, build list and DOMC (one option at a time, yes or no).
+                </p>
+                <p className="text-xs text-gray-600 mb-6">
+                  <strong>Pace:</strong> about 1 minute 50 seconds per question. Answer what you know on a first pass, flag the rest, and keep 10 minutes to check nothing is blank.
+                </p>
 
-                  {activeTab === "develop" && (
-                    <div className="space-y-3 text-xs leading-relaxed text-gray-600">
-                      <div className="flex items-center gap-2 mb-2">
-                        <span className="px-2 py-0.5 bg-teal-100 text-teal-800 font-bold rounded uppercase tracking-wider text-[9px]">Expanded Focus</span>
-                        <h3 className="font-bold text-teal-900 text-sm">Develop Models (37% of exam)</h3>
+                <div className="space-y-2">
+                  {EXAM_TOPICS.map((topic, i) => {
+                    const inBank = studyBank.filter((q) => q.category === topic.name).length;
+                    return (
+                      <div key={topic.name} className="flex flex-wrap items-center justify-between gap-3 p-3 border border-gray-200 rounded-xl">
+                        <span className="flex items-center gap-2.5 min-w-0">
+                          <span className={`w-6 h-6 shrink-0 rounded border text-[11px] font-bold flex items-center justify-center ${topic.color}`}>{i + 1}</span>
+                          <span className="text-sm font-semibold text-gray-900">{topic.name}</span>
+                        </span>
+                        <span className="flex items-center gap-3 shrink-0">
+                          <span className="text-[11px] text-gray-500">{inBank} questions</span>
+                          {inBank > 0 && (
+                            <button
+                              onClick={() => startNewSession("DOMAIN_PRACTICE", topic.name)}
+                              className="px-3 py-1.5 border border-gray-300 hover:border-[#FF694B] hover:text-[#FF694B] text-gray-700 rounded-lg text-[11px] font-bold uppercase tracking-wider cursor-pointer transition-colors"
+                            >
+                              Practice
+                            </button>
+                          )}
+                        </span>
                       </div>
-                      <p>
-                        This category governs advanced development patterns, including modular design, optimization strategies, and the structural configurations that power collaboration across teams.
-                      </p>
-                      <ul className="list-disc pl-4 space-y-1 text-gray-700">
-                        <li><strong>dbt Mesh:</strong> Structuring multi-project boundaries, calling public upstream targets with dual-argument <code>ref('project', 'model')</code> syntax.</li>
-                        <li><strong>Model Access Controls:</strong> Organizing permissions using <code>access: public | private | protected</code> levels to safeguard project assets.</li>
-                        <li><strong>Model Contracts:</strong> Safeguarding database layouts dynamically using <code>contract: &#123;enforced: true&#125;</code> parameters and explicit schema data types.</li>
-                        <li><strong>Model Versioning:</strong> Handling deprecation dates (<code>deprecated_at</code>) and defining separate active version releases.</li>
-                        <li><strong>Semantic Layer:</strong> Designing metrics using MetricFlow standards based on dimensions, entities, measures, and expressions.</li>
-                      </ul>
-
-                      {/* Interactive visual component illustrating cross-project refs */}
-                      <DbtMeshVisualizer />
-                    </div>
-                  )}
-
-                  {activeTab === "debug" && (
-                    <div className="space-y-3 text-xs leading-relaxed text-gray-600">
-                      <div className="flex items-center gap-2 mb-2">
-                        <span className="px-2 py-0.5 bg-amber-100 text-amber-800 font-bold rounded uppercase tracking-wider text-[9px]">Core Troubleshooting</span>
-                        <h3 className="font-bold text-amber-900 text-sm">Debug Data Models (22% of exam)</h3>
-                      </div>
-                      <p>
-                        Debugging evaluates the engineer's ability to diagnose compile-time, build-time, and run-time catalog blocks inside complex pipeline dags.
-                      </p>
-                      <ul className="list-disc pl-4 space-y-1 text-gray-700">
-                        <li><strong>Compilation Hurdles:</strong> Circular dependencies, relation type mismatches (dropping existing views prior to materializing tables), and target-specific profile settings.</li>
-                        <li><strong>Log Inspections:</strong> Examining generated SQL compilations inside the <code>target/compiled/</code> and <code>target/run/</code> paths.</li>
-                        <li><strong>Dry Runs:</strong> Utilizing <code>dbt compile</code> to identify syntactical errors without executing operations against underlying warehouses.</li>
-                      </ul>
-                    </div>
-                  )}
-
-                  {activeTab === "test" && (
-                    <div className="space-y-3 text-xs leading-relaxed text-gray-600">
-                      <div className="flex items-center gap-2 mb-2">
-                        <span className="px-2 py-0.5 bg-purple-100 text-purple-800 font-bold rounded uppercase tracking-wider text-[9px]">Major Feature Added</span>
-                        <h3 className="font-bold text-purple-900 text-sm">Test and Document Models (23% of exam)</h3>
-                      </div>
-                      <p>
-                        Testing spans validation of logical rules, referential integrity matching, catalog descriptions, and the newly added unit testing engine.
-                      </p>
-                      <ul className="list-disc pl-4 space-y-1 text-gray-700">
-                        <li><strong>dbt Unit Testing (v1.8):</strong> Designing unit tests completely in YAML schema files under the <code>unit_tests:</code> array, mapping mocked input dictionary rows (<code>rows: [...]</code>) to sources and upstream refs.</li>
-                        <li><strong>Selective Test Commands:</strong> Exclusively running unit tests with the command: <code>dbt test --select "test_type:unit"</code>.</li>
-                        <li><strong>Generic vs Singular Tests:</strong> Recognizing folder hierarchies (generic macros vs singular custom SQL scripts) and referential constraints.</li>
-                        <li><strong>Freshness Scans:</strong> Applying source freshness rules inside table properties to warn when external feeds lag.</li>
-                      </ul>
-                    </div>
-                  )}
-
-                  {activeTab === "deploy" && (
-                    <div className="space-y-3 text-xs leading-relaxed text-gray-600">
-                      <div className="flex items-center gap-2 mb-2">
-                        <span className="px-2 py-0.5 bg-blue-100 text-blue-800 font-bold rounded uppercase tracking-wider text-[9px]">Integrated Lineage</span>
-                        <h3 className="font-bold text-blue-900 text-sm">Deploy dbt Projects (18% of exam)</h3>
-                      </div>
-                      <p>
-                        Deployment covers production environments, Slim CI workflows, metadata indexing, and warehouse target safety isolation rules.
-                      </p>
-                      <ul className="list-disc pl-4 space-y-1 text-gray-700">
-                        <li><strong>Slim CI Execution:</strong> Harnessing production run artifacts dynamically under <code>--state</code> folders, compiling only impacted nodes with <code>--select state:modified+</code>, and executing dynamic upstream deferrals (<code>--defer</code>).</li>
-                        <li><strong>dbt Explorer:</strong> Harnessing Cloud Explorer metadata to view cross-project lineage diagrams, dependency paths, and documentation trees across isolated dbt Mesh repositories.</li>
-                        <li><strong>Schema Overrides:</strong> Overriding the standard <code>generate_schema_name</code> macro to dynamically govern user development schema folders vs clean production targets.</li>
-                      </ul>
-                    </div>
-                  )}
+                    );
+                  })}
                 </div>
-
               </div>
 
             </div>
@@ -1245,17 +1129,14 @@ export default function App() {
                           </div>
                           
                           <FormattedExplanation explanation={currentQuestion.explanation} className="mb-3" />
-                          
-                          {currentQuestion.references && (
-                            <a
-                              href={currentQuestion.references}
-                              target="_blank"
-                              rel="noreferrer"
-                              className="text-[#FF694B] hover:underline font-bold inline-flex items-center gap-1.5"
-                            >
-                              View Official dbt Documentation <ChevronRight className="w-3 h-3" />
-                            </a>
-                          )}
+
+                          <p className="text-[10px] uppercase font-bold tracking-wider text-gray-400 mt-4">Source</p>
+                          <EvidenceBlock questionId={currentQuestion.id} />
+
+                          <DoubtfulToggle
+                            marked={!!doubtful[currentQuestion.id]}
+                            onToggle={() => toggleDoubtfulMark(currentQuestion.id)}
+                          />
                         </motion.div>
                       )}
 
@@ -1372,7 +1253,7 @@ export default function App() {
               <button
                 onClick={toggleFullscreen}
                 className="px-3.5 py-2 bg-white border border-gray-300 hover:border-gray-400 text-gray-700 rounded-lg text-xs font-semibold flex items-center gap-2 cursor-pointer transition-colors shadow-xs"
-                title={isFullscreen ? "Exit Fullscreen" : "Toggle Fullscreen Kiosk Mode"}
+                title={isFullscreen ? "Exit Fullscreen" : "Full screen"}
               >
                 {isFullscreen ? <Minimize2 className="w-3.5 h-3.5" /> : <Maximize2 className="w-3.5 h-3.5" />}
                 <span>{isFullscreen ? "Exit Fullscreen" : "Full Screen"}</span>
@@ -1474,12 +1355,12 @@ export default function App() {
             <div className="bg-white rounded-2xl border border-gray-200 p-6 shadow-sm">
               <h2 className="text-md uppercase tracking-wider font-bold text-gray-400 mb-6 flex items-center gap-2">
                 <Award className="w-4 h-4 text-[#FF694B]" />
-                Performance By dbt Domains
+                Performance by exam topic
               </h2>
 
               <div className="space-y-5">
                 {/* Map unique category names */}
-                {(["Develop Models", "Debug Data Models", "Test and Document Models", "Deploy dbt Projects"] as const).map((catName) => {
+                {CATEGORIES.map((catName) => {
                   let total = 0;
                   let correct = 0;
 
@@ -1555,29 +1436,44 @@ export default function App() {
 
             </div>
 
-            {/* Actions & Tips panel */}
+            {/* Next steps: weakest topics in this session */}
             <div className="bg-[#1A1A1A] text-white rounded-2xl p-6 shadow-sm">
               <h2 className="text-md uppercase tracking-wider font-bold text-gray-400 mb-4 flex items-center gap-2">
                 <BrainCircuit className="w-4 h-4 text-[#FF694B]" />
-                New Exam Prep Recommendations
+                What to practice next
               </h2>
-
-              <div className="space-y-4 text-xs text-gray-300 leading-relaxed">
-                <div>
-                  <h3 className="font-bold text-white mb-1">Develop Models Checklist:</h3>
-                  <p className="text-gray-400">Review cross-project references. A downstream project can <code>ref</code> an upstream model only when that model is <code>access: public</code>; an enforced contract is recommended for public models but not required.</p>
-                </div>
-                
-                <div>
-                  <h3 className="font-bold text-white mb-1">Testing & Unit Mocks checklist:</h3>
-                  <p className="text-gray-400">Study the v1.8 mock row validation pattern inside YAML blocks. Expected test executions validate custom models selectively via targeted filters (e.g. <code>dbt test --select "test_type:unit"</code>).</p>
-                </div>
-
-                <div>
-                  <h3 className="font-bold text-white mb-1">Deployment Deferrals Checklist:</h3>
-                  <p className="text-gray-400">Understand Slim CI processes inside production pipelines. Rebuilding processes identify modified files using production manifest catalogs (<code>state:modified+ --defer --state path/to/manifest</code>).</p>
-                </div>
-              </div>
+              {(() => {
+                const byTopic = CATEGORIES.map((name) => {
+                  const qs = session.questions.filter((q) => q.category === name);
+                  const correct = qs.filter((q) => isCorrect(q, session.userAnswers[q.id], session.presentations[q.id])).length;
+                  return { name, total: qs.length, correct, missed: qs.length - correct };
+                })
+                  .filter((t) => t.missed > 0)
+                  .sort((a, b) => b.missed - a.missed || a.correct / a.total - b.correct / b.total);
+                if (byTopic.length === 0) {
+                  return <p className="text-xs text-gray-300">No missed questions in this session.</p>;
+                }
+                return (
+                  <ul className="space-y-3">
+                    {byTopic.slice(0, 3).map((t) => (
+                      <li key={t.name} className="flex items-center justify-between gap-3">
+                        <div className="min-w-0">
+                          <p className="text-xs font-bold text-white">{t.name}</p>
+                          <p className="text-[11px] text-gray-400">
+                            Missed {t.missed} of {t.total}
+                          </p>
+                        </div>
+                        <button
+                          onClick={() => startNewSession("DOMAIN_PRACTICE", t.name)}
+                          className="shrink-0 px-3 py-1.5 border border-gray-600 hover:border-[#FF694B] hover:text-[#FF694B] text-gray-200 rounded-lg text-[11px] font-bold uppercase tracking-wider cursor-pointer transition-colors"
+                        >
+                          Practice
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                );
+              })()}
             </div>
 
           </div>
@@ -1645,16 +1541,9 @@ export default function App() {
                     <div className="p-4 bg-gray-50 border border-gray-100 rounded-lg text-xs leading-relaxed text-gray-600 select-text">
                       <p className="font-bold text-gray-900 mb-2 select-none">Explanation:</p>
                       <FormattedExplanation explanation={q.explanation} className="mb-2" />
-                      {q.references && (
-                        <a
-                          href={q.references}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="text-[#FF694B] hover:underline font-bold"
-                        >
-                          Official Documentation Reference
-                        </a>
-                      )}
+                      <p className="text-[10px] uppercase font-bold tracking-wider text-gray-400 mt-4 select-none">Source</p>
+                      <EvidenceBlock questionId={q.id} />
+                      <DoubtfulToggle marked={!!doubtful[q.id]} onToggle={() => toggleDoubtfulMark(q.id)} />
                     </div>
 
                   </div>
