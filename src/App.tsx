@@ -33,6 +33,8 @@ import { evidence } from "./evidence";
 import { DoubtfulMarks, loadDoubtful, saveDoubtful, toggleDoubtful } from "./doubtful";
 import EvidenceBlock from "./components/EvidenceBlock";
 import DoubtfulToggle from "./components/DoubtfulToggle";
+import AskDialog, { AskButton } from "./components/AskDialog";
+import { AskContext } from "./askPrompt";
 import FormattedText, { FormattedExplanation } from "./components/FormattedText";
 import QuestionBody from "./components/questions/QuestionBody";
 import {
@@ -101,6 +103,10 @@ export default function App() {
   const [isPracticeMode, setIsPracticeMode] = useState<boolean>(true); // Practice mode allows checking answers instantly
   const [isPaused, setIsPaused] = useState(false);
   const [userCheckedCurrent, setUserCheckedCurrent] = useState(false); // In practice mode, has user checked answer on current Q?
+  // "Ask about this question": the open dialog (question context plus any selected quote), and a short "copied" notice.
+  const [ask, setAsk] = useState<{ context: AskContext; quote: string } | null>(null);
+  const [askCopied, setAskCopied] = useState(false);
+  const [selectionAsk, setSelectionAsk] = useState<{ id: number; text: string; left: number; top: number } | null>(null);
   const [isFullscreen, setIsFullscreen] = useState(false);
 
   // Sync fullscreen state with browser events
@@ -367,6 +373,48 @@ export default function App() {
     ? session.questions.filter((q) => isAnswered(q, session.userAnswers[q.id], presentationOf(q))).length
     : 0;
   const currentIsAnswered = !!session && !!currentQuestion && isAnswered(currentQuestion, session.userAnswers[currentQuestion.id], presentationOf(currentQuestion));
+
+  // Opens "Ask about this question" for a question of the session, as the user sees it right now.
+  const openAsk = (questionId: number, quote = "") => {
+    if (!session) return;
+    const index = session.questions.findIndex((q) => q.id === questionId);
+    if (index < 0) return;
+    const question = session.questions[index];
+    const onResults = screen === "RESULT";
+    const revealed = onResults || (index === currentQuestionIndex && userCheckedCurrent);
+    setSelectionAsk(null);
+    setAsk({
+      quote,
+      context: {
+        question,
+        presentation: presentationOf(question),
+        answer: session.userAnswers[question.id],
+        revealed,
+        position: `${onResults ? "reviewing results, " : ""}question ${index + 1} of ${session.questions.length} in a ${MODE_LABELS[session.mode]}`,
+        displayOrder: session.poolOrder[question.id],
+      },
+    });
+  };
+
+  // Selecting text inside a question offers "Ask about this" next to the selection.
+  useEffect(() => {
+    const onSelection = () => {
+      const selection = window.getSelection();
+      const text = selection?.toString().replace(/\s+/g, " ").trim() ?? "";
+      const node = selection && selection.rangeCount ? selection.getRangeAt(0).commonAncestorContainer : null;
+      const host = (node instanceof Element ? node : node?.parentElement)?.closest<HTMLElement>("[data-ask-id]");
+      if (!host || text.length < 2 || ask) return setSelectionAsk(null);
+      const box = selection!.getRangeAt(0).getBoundingClientRect();
+      setSelectionAsk({
+        id: Number(host.dataset.askId),
+        text: text.slice(0, 400),
+        left: Math.max(8, Math.min(window.innerWidth - 140, box.left + box.width / 2 - 60)),
+        top: Math.max(8, box.top - 40),
+      });
+    };
+    document.addEventListener("selectionchange", onSelection);
+    return () => document.removeEventListener("selectionchange", onSelection);
+  }, [ask]);
 
   // Stores the answer to the current question (each format component builds its own Answer value).
   const setCurrentAnswer = (answer: Answer) => {
@@ -1025,7 +1073,7 @@ export default function App() {
             {/* Content Area for active question */}
             <section className="flex-1 min-h-0 bg-white flex flex-col overflow-hidden relative">
               <div className="flex-1 min-h-0 overflow-y-auto p-6 md:p-10 pb-32 md:pb-32">
-                <div className="max-w-3xl mx-auto w-full">
+                <div className="max-w-3xl mx-auto w-full" data-ask-id={currentQuestion.id}>
                   
                   {/* Category, Difficulty, and Pre-Answer Docs Reference Link */}
                   <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
@@ -1054,6 +1102,7 @@ export default function App() {
                           <ExternalLink className="w-3 h-3 text-[#FF694B]/70 group-hover:translate-x-0.5 transition-transform" />
                         </a>
                       )}
+                      <AskButton onClick={() => openAsk(currentQuestion.id)} />
                     </div>
 
                     <div className="text-right">
@@ -1490,7 +1539,7 @@ export default function App() {
                 const answeredCorrectly = isCorrect(q, session.userAnswers[q.id], session.presentations[q.id]);
 
                 return (
-                  <div key={q.id} className={`pt-6 ${idx === 0 ? "pt-0" : ""}`}>
+                  <div key={q.id} data-ask-id={q.id} className={`pt-6 ${idx === 0 ? "pt-0" : ""}`}>
                     
                     {/* Status header */}
                     <div className="flex flex-wrap items-center justify-between gap-4 mb-3">
@@ -1506,6 +1555,7 @@ export default function App() {
                       </div>
 
                       <div className="flex items-center gap-2">
+                        <AskButton onClick={() => openAsk(q.id)} />
                         {answeredCorrectly ? (
                           <span className="px-2.5 py-0.5 bg-green-50 border border-green-200 text-green-700 text-[10px] font-bold rounded flex items-center gap-1">
                             <Check className="w-3 h-3 stroke-[3]" /> Correct
@@ -1556,6 +1606,33 @@ export default function App() {
         </div>
       )}
 
+      {selectionAsk && !ask && (
+        <button
+          type="button"
+          onMouseDown={(e) => e.preventDefault()}
+          onClick={() => openAsk(selectionAsk.id, selectionAsk.text)}
+          style={{ position: "fixed", left: selectionAsk.left, top: selectionAsk.top }}
+          className="z-50 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gray-900 text-white text-xs font-semibold shadow-lg hover:bg-[#FF694B] cursor-pointer"
+        >
+          Ask about this
+        </button>
+      )}
+      {ask && (
+        <AskDialog
+          context={ask.context}
+          quote={ask.quote}
+          onClose={() => setAsk(null)}
+          onCopied={() => {
+            setAskCopied(true);
+            setTimeout(() => setAskCopied(false), 2500);
+          }}
+        />
+      )}
+      {askCopied && (
+        <div role="status" className="fixed bottom-24 left-1/2 -translate-x-1/2 z-50 px-4 py-2 rounded-lg bg-gray-900 text-white text-xs font-semibold shadow-lg">
+          Copied. Paste it into your LLM.
+        </div>
+      )}
     </div>
   );
 }
