@@ -24,7 +24,8 @@ import {
   ExternalLink,
   ChevronLeft,
   PanelLeftClose,
-  PanelLeftOpen
+  PanelLeftOpen,
+  Infinity as InfinityIcon
 } from "lucide-react";
 import { Answer, Question, ExamMode, ExamSession, QuestionFormat } from "./types";
 import { allQuestions as examQuestions } from "./questionBank";
@@ -39,6 +40,7 @@ import FormattedText, { FormattedExplanation } from "./components/FormattedText"
 import QuestionBody from "./components/questions/QuestionBody";
 import {
   AnswerHistory,
+  endlessQueue,
   loadHistory,
   pickPracticeQuestions,
   recordResults,
@@ -59,10 +61,22 @@ const FORMAT_LABELS: Record<QuestionFormat | "domc", string> = {
 
 type Screen = "WELCOME" | "EXAM" | "RESULT";
 
+/** Results-page button that starts the same kind of session again, with fresh questions. */
+const NEW_SESSION_LABELS: Record<ExamMode, string> = {
+  MOCK_EXAM: "Start a new mock exam",
+  QUICK_QUIZ: "Start a new quiz",
+  DOMAIN_PRACTICE: "Practice this topic again",
+  ENDLESS: "Continue endless practice",
+};
+
+const QUIZ_SIZES = [5, 10, 20, 30, 50];
+const QUIZ_SIZE_KEY = "dbt-exam-prep:quiz-size:v1";
+
 const MODE_LABELS: Record<ExamMode, string> = {
   MOCK_EXAM: "Full Mock Exam",
   QUICK_QUIZ: "Quick Practice Quiz",
   DOMAIN_PRACTICE: "Topic Practice",
+  ENDLESS: "Endless Practice",
 };
 
 const slugify = (value: string) => value.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
@@ -325,8 +339,26 @@ export default function App() {
     setAnswerHistory({});
   };
 
+  // Quick quiz length, remembered in this browser.
+  const [quizSize, setQuizSize] = useState<number>(() => {
+    try {
+      const saved = Number(window.localStorage.getItem(QUIZ_SIZE_KEY));
+      return QUIZ_SIZES.includes(saved) ? saved : 10;
+    } catch {
+      return 10;
+    }
+  });
+  const chooseQuizSize = (size: number) => {
+    setQuizSize(size);
+    try {
+      window.localStorage.setItem(QUIZ_SIZE_KEY, String(size));
+    } catch {
+      // Storage unavailable: the choice lasts for this page load.
+    }
+  };
+
   // Session Constructors
-  const startNewSession = (mode: ExamMode, domainFilter?: string) => {
+  const startNewSession =(mode: ExamMode, domainFilter?: string) => {
     let selectedQuestionsList: Question[] = [];
 
     if (mode === "MOCK_EXAM") {
@@ -334,8 +366,12 @@ export default function App() {
       selectedQuestionsList = pickMockExam(studyBank);
       setTimeLeft(120 * 60); // 120 minutes (7,200 seconds) countdown
     } else if (mode === "QUICK_QUIZ") {
-      selectedQuestionsList = pickPracticeQuestions(studyBank, answerHistory, shuffle, 10);
+      selectedQuestionsList = pickPracticeQuestions(studyBank, answerHistory, shuffle, quizSize);
       setTimeLeft(0); // For practice, counts UP
+    } else if (mode === "ENDLESS") {
+      // The whole bank once, never-answered questions first; the user ends the session whenever they like.
+      selectedQuestionsList = endlessQueue(studyBank, answerHistory, shuffle);
+      setTimeLeft(0);
     } else if (mode === "DOMAIN_PRACTICE" && domainFilter) {
       selectedQuestionsList = pickPracticeQuestions(
         studyBank.filter((q) => q.category === domainFilter),
@@ -460,11 +496,21 @@ export default function App() {
   const submitExam = () => {
     if (!session) return;
 
+    // Endless practice ends whenever the user stops: only the questions they answered are scored and reviewed.
+    const graded =
+      session.mode === "ENDLESS"
+        ? session.questions.filter((q) => isAnswered(q, session.userAnswers[q.id], presentationOf(q)))
+        : session.questions;
+    if (graded.length === 0) {
+      exitSession();
+      return;
+    }
+
     let correctCount = 0;
     const categoryScores: { [category: string]: { correct: number; total: number } } = {};
     const newlyGraded: { questionId: number; correct: boolean }[] = [];
 
-    session.questions.forEach((q) => {
+    graded.forEach((q) => {
       const answer = session.userAnswers[q.id];
       const presentation = presentationOf(q);
 
@@ -487,7 +533,7 @@ export default function App() {
     });
     recordGraded(newlyGraded);
 
-    const scorePercentage = Math.round((correctCount / session.questions.length) * 100);
+    const scorePercentage = Math.round((correctCount / graded.length) * 100);
     // Only the full-length mock exam is judged against the exam's 65% pass mark; practice sessions are too short to predict a result.
     const hasPassed = session.mode === "MOCK_EXAM" ? scorePercentage >= 65 : undefined;
 
@@ -498,6 +544,7 @@ export default function App() {
 
     const finalSessionObj = {
       ...session,
+      questions: graded,
       completed: true,
       score: scorePercentage,
       passed: hasPassed,
@@ -615,7 +662,7 @@ export default function App() {
                   </div>
                 )}
 
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
                   
                   {/* Mode 1 */}
                   <div className="flex flex-col justify-between p-5 border border-gray-200 rounded-xl bg-[#FFF5F2]/20 hover:bg-[#FFF5F2]/40 transition-colors duration-200 relative overflow-hidden group">
@@ -655,8 +702,26 @@ export default function App() {
                       </div>
                       <h3 className="font-bold text-gray-900 text-md mb-1">Quick Practice Quiz</h3>
                       <p className="text-xs text-gray-600 leading-relaxed mb-4">
-                        10 untimed questions with study overlays, drawn from questions you have not answered yet or got wrong last time.
+                        {quizSize} untimed questions with study overlays, drawn from questions you have not answered yet or got wrong last time.
                       </p>
+                      <div className="flex items-center gap-2 mb-4" role="group" aria-label="Number of questions">
+                        <span className="text-[11px] text-gray-500 font-medium">Questions</span>
+                        <div className="flex bg-gray-100 rounded-lg p-0.5 gap-0.5">
+                          {QUIZ_SIZES.map((size) => (
+                            <button
+                              key={size}
+                              type="button"
+                              aria-pressed={quizSize === size}
+                              onClick={() => chooseQuizSize(size)}
+                              className={`px-2.5 py-1 text-[11px] font-bold rounded-md transition-all cursor-pointer ${
+                                quizSize === size ? "bg-white text-gray-900 shadow-sm" : "text-gray-500 hover:text-gray-900"
+                              }`}
+                            >
+                              {size}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
                     </div>
                     <button
                       onClick={() => startNewSession("QUICK_QUIZ")}
@@ -698,6 +763,31 @@ export default function App() {
                         ))}
                       </select>
                     </div>
+                  </div>
+
+                  {/* Mode 4 */}
+                  <div className="flex flex-col justify-between p-5 border border-gray-200 rounded-xl bg-white hover:border-[#FF694B]/40 transition-all duration-200 relative overflow-hidden group">
+                    <div>
+                      <div className="flex items-center justify-between mb-4">
+                        <div className="w-10 h-10 bg-[#FFF5F2] rounded-lg text-[#FF694B] flex items-center justify-center font-bold">
+                          <InfinityIcon className="w-5 h-5" />
+                        </div>
+                        <span className="px-2 py-0.5 bg-emerald-50 text-emerald-700 border border-emerald-200 text-[10px] font-bold uppercase tracking-wider rounded">
+                          Untimed
+                        </span>
+                      </div>
+                      <h3 className="font-bold text-gray-900 text-md mb-1">Endless Practice</h3>
+                      <p className="text-xs text-gray-600 leading-relaxed mb-4">
+                        Every question in the bank, one after another, each at most once: questions you have never answered first, then
+                        the ones you got wrong, then the rest, oldest first. Stop whenever you like; the review covers what you answered.
+                      </p>
+                    </div>
+                    <button
+                      onClick={() => startNewSession("ENDLESS")}
+                      className="w-full py-2.5 bg-white border border-gray-300 hover:border-[#FF694B] hover:text-[#FF694B] text-gray-700 rounded-lg text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-2 cursor-pointer transition-colors"
+                    >
+                      <InfinityIcon className="w-3.5 h-3.5" /> Start Endless Practice
+                    </button>
                   </div>
 
                 </div>
@@ -891,13 +981,15 @@ export default function App() {
               {/* Submit button directly inside header for rapid end */}
               <button
                 onClick={() => {
-                  if (confirm("Are you sure you want to end your exam session and submit responses for evaluation?")) {
-                    submitExam();
-                  }
+                  const prompt =
+                    session.mode === "ENDLESS"
+                      ? "End endless practice and see the results for the questions you answered?"
+                      : "Are you sure you want to end your exam session and submit responses for evaluation?";
+                  if (confirm(prompt)) submitExam();
                 }}
                 className="px-4 py-1.5 bg-red-600 hover:bg-red-700 text-white rounded text-xs font-semibold uppercase tracking-wider transition-colors cursor-pointer"
               >
-                Submit & End
+                {session.mode === "ENDLESS" ? "End & Review" : "Submit & End"}
               </button>
             </div>
           </header>
@@ -1300,6 +1392,12 @@ export default function App() {
 
             <div className="flex items-center gap-2">
               <button
+                onClick={() => startNewSession(session.mode, session.targetDomain)}
+                className="px-4 py-2 bg-[#1A1A1A] hover:bg-[#FF694B] text-white rounded-lg text-xs font-bold uppercase tracking-wider flex items-center gap-2 cursor-pointer transition-colors shadow-xs"
+              >
+                <Play className="w-3.5 h-3.5" /> {NEW_SESSION_LABELS[session.mode]}
+              </button>
+              <button
                 onClick={toggleFullscreen}
                 className="px-3.5 py-2 bg-white border border-gray-300 hover:border-gray-400 text-gray-700 rounded-lg text-xs font-semibold flex items-center gap-2 cursor-pointer transition-colors shadow-xs"
                 title={isFullscreen ? "Exit Fullscreen" : "Full screen"}
@@ -1464,22 +1562,16 @@ export default function App() {
               {/* Action Buttons footer */}
               <div className="flex flex-wrap gap-3 mt-8 pt-6 border-t border-gray-100">
                 <button
-                  onClick={() => goTo("WELCOME")}
+                  onClick={() => startNewSession(session.mode, session.targetDomain)}
                   className="flex-auto whitespace-nowrap px-5 py-3 bg-[#1A1A1A] hover:bg-[#FF694B] text-white text-xs font-bold uppercase tracking-wider rounded-xl transition-colors cursor-pointer flex items-center justify-center gap-2"
                 >
-                  <RotateCcw className="w-4 h-4" /> Back to Dashboard
+                  <Play className="w-4 h-4" /> {NEW_SESSION_LABELS[session.mode]}
                 </button>
                 <button
-                  onClick={() => {
-                    if (session.mode === "DOMAIN_PRACTICE") {
-                      startNewSession(session.mode, session.targetDomain);
-                    } else {
-                      startNewSession(session.mode);
-                    }
-                  }}
+                  onClick={() => goTo("WELCOME")}
                   className="flex-auto whitespace-nowrap px-5 py-3 border border-gray-300 hover:border-[#FF694B] hover:text-[#FF694B] text-gray-700 text-xs font-bold uppercase tracking-wider rounded-xl cursor-pointer transition-colors flex items-center justify-center gap-2"
                 >
-                  <Play className="w-4 h-4" /> Retry Test Session
+                  <RotateCcw className="w-4 h-4" /> Back to Dashboard
                 </button>
               </div>
 
