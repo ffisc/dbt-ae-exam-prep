@@ -13,7 +13,7 @@ The questions were written with an AI assistant. The app only serves a question 
 - **The dbt docs:** a verbatim quote, with a link to the docs page it comes from.
 - **A dbt run:** where the docs don't settle the behaviour, it was reproduced on dbt Core 1.11. The app shows the commands and the output observed. The projects used for these runs are not part of this repo.
 
-Separate AI reviewers were also told to assume the questions had mistakes and to hunt for them: wrong answers, a second defensible option, giveaways in the stem and missing setup. What they found was fixed or the question was withheld. No human expert has reviewed the bank.
+Separate AI reviewers were also told to assume the questions had mistakes and to hunt for them: wrong answers, a second defensible option, giveaways in the stem and missing setup. What they found was fixed or the question was withheld. I (Felipe) then went through the questions and removed/edited those that I perceived to be misleading or ambiguous, but some might still remain.
 
 The app shows the evidence next to each explanation, so you can check it yourself. If an answer still looks wrong to you, mark the question as doubtful and the app stops serving it.
 
