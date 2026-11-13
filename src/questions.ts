@@ -748,7 +748,7 @@ where event_at > (select max(event_at) from {{ this }})
     id: 41,
     category: "Developing and optimizing dbt models",
     difficulty: "Advanced",
-    questionText: "A developer is writing a cross-database macro. It must return the first expression below when dbt runs on Snowflake and the second when it runs on BigQuery. Which property should the macro check to choose between them?",
+    questionText: "A developer is writing a macro `trunc_month` that must return the first expression below when dbt runs on Snowflake and the second when it runs on BigQuery. Which dbt feature selects the right SQL for the active adapter automatically when the macro is called?",
     codeSnippet: `-- Snowflake
 date_trunc('month', created_at)
 
@@ -756,14 +756,14 @@ date_trunc('month', created_at)
 date_trunc(created_at, month)`,
     codeLanguage: "sql",
     options: [
-      "Use `env_var('DBT_WAREHOUSE')` to read the adapter type from the environment.",
-      "Use `target.type` to read the active adapter type.",
-      "Use `target.name` to read the adapter type of the active target.",
-      "Use `var('adapter_type')`, which dbt sets to the adapter type automatically."
+      "Use `var('warehouse')`, passed with `--vars` on each run, so dbt picks the macro for that warehouse.",
+      "Use a `dispatch` config with `search_order: ['snowflake', 'bigquery']` in `dbt_project.yml`.",
+      "Use `adapter.dispatch('trunc_month')` with `snowflake__trunc_month` and `bigquery__trunc_month` macros.",
+      "Use `{% if execute %}` blocks so dbt renders only the branch for the adapter of the active run."
     ],
-    correctAnswers: [1],
-    explanation: "CORRECT ACTION:\nThe `target` dictionary is populated from the connection settings in `profiles.yml`. `target.type` holds the adapter type, such as `snowflake` or `bigquery`, so it can drive an `if` / `elif` block in a cross-database macro.\n\nINCORRECT COMPETING OPTIONS:\n- Using `env_var('DBT_WAREHOUSE')`: this reads an environment variable that dbt does not set, so it does not reveal the adapter type.\n- Using `target.name`: this holds the name of the target, such as `dev` or `prod`, not the adapter type.\n- Using `var('adapter_type')`: dbt does not define this variable automatically, so it is empty unless the project sets it.",
-    references: "https://docs.getdbt.com/reference/dbt-jinja-functions/target",
+    correctAnswers: [2],
+    explanation: "CORRECT ACTION:\n`adapter.dispatch` selects a macro implementation by adapter. `trunc_month` returns `{{ return(adapter.dispatch('trunc_month')(column)) }}`, and dbt calls the implementation named with the active adapter's prefix, `snowflake__trunc_month` or `bigquery__trunc_month`, or `default__trunc_month` when there is none. A hand-written `{% if target.type == 'snowflake' %}` block inside one macro also runs, but then the macro does the selecting rather than dbt, and another project cannot override one adapter's implementation through a `dispatch` config.\n\nINCORRECT COMPETING OPTIONS:\n- `var('warehouse')` with `--vars`: a variable only supplies a value; dbt chooses a dispatched implementation by adapter prefix and namespace, not by variables.\n- `search_order: ['snowflake', 'bigquery']`: `search_order` lists the packages and projects dbt searches for a macro namespace, not adapters.\n- `{% if execute %}`: `execute` tells whether dbt is parsing the project or executing it, not which adapter is active.",
+    references: "https://docs.getdbt.com/reference/dbt-jinja-functions/dispatch",
     dbtVersionFocus: "Core"
   },
   {

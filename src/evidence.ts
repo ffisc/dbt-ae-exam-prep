@@ -770,19 +770,34 @@ export const evidence: Record<number, Evidence> = {
   "41": {
     "quotes": [
       {
-        "page": "About target variables",
-        "url": "https://docs.getdbt.com/reference/dbt-jinja-functions/target",
-        "text": "| `target.type`         | postgres     | The active adapter being used."
+        "page": "About dispatch config",
+        "url": "https://docs.getdbt.com/reference/dbt-jinja-functions/dispatch",
+        "text": "Because SQL syntax, data types, and DDL/DML support vary across adapters, dbt can define and call generic functional macros, and then \"dispatch\" that macro to the appropriate implementation for the current adapter."
       },
       {
-        "page": "About target variables",
-        "url": "https://docs.getdbt.com/reference/dbt-jinja-functions/target",
-        "text": "| `target.name`         | dev          | Name of the active target"
+        "page": "About dispatch config",
+        "url": "https://docs.getdbt.com/reference/dbt-jinja-functions/dispatch",
+        "text": "Adapter-specific macros are prefixed with the lowercase adapter name and two underscores."
       },
       {
-        "page": "About target variables",
-        "url": "https://docs.getdbt.com/reference/dbt-jinja-functions/target",
-        "text": "These values are based on the target defined in your [profiles.yml](https://docs.getdbt.com/docs/local/profiles.yml.md) file."
+        "page": "About dispatch config",
+        "url": "https://docs.getdbt.com/reference/dbt-jinja-functions/dispatch",
+        "text": "If dbt does not find an adapter-specific implementation, it will dispatch to the default implementation."
+      },
+      {
+        "page": "About dispatch config",
+        "url": "https://docs.getdbt.com/reference/dbt-jinja-functions/dispatch",
+        "text": "dbt uses two criteria when searching for the right candidate macro:"
+      },
+      {
+        "page": "About dispatch config",
+        "url": "https://docs.getdbt.com/reference/dbt-jinja-functions/dispatch",
+        "text": "The config below defines dynamic routing for that namespace, telling dbt to search through an ordered sequence of packages, instead of just the `dbt_utils` package."
+      },
+      {
+        "page": "About execute variable",
+        "url": "https://docs.getdbt.com/reference/dbt-jinja-functions/execute",
+        "text": "`execute` is a Jinja variable that returns True when dbt is in \"execute\" mode."
       }
     ]
   },
