@@ -2,6 +2,8 @@
 
 A practice app for the dbt Analytics Engineering Certification exam, written for dbt Core 1.11. It runs in your browser and needs no account or backend.
 
+You don't have to be taking the exam to use it. It also works as a dbt quiz, or as a knowledge check to find gaps in your understanding of dbt.
+
 It is based on the dbt Labs [study guide for dbt Core 1.11](https://www.getdbt.com/dbt-assets/certifications/dbt-certificate-study-guide-version-1-11). Questions follow the guide's seven topics and use the exam's question formats: multiple choice, discrete option multiple choice (DOMC), fill in the blank, matching, build list and hotspot. Read the guide itself for what each topic covers.
 
 ## How answers are checked
@@ -30,7 +32,7 @@ dbt is a trademark of dbt Labs, used here only to name the exam and the tool.
 - **Full mock exam:** a timed run weighted across the seven topics, with a pass mark.
 - **Quick practice quiz:** a short untimed quiz. You pick the number of questions.
 - **Topic practice:** one topic at a time.
-- **Endless practice:** works through the whole bank. Questions you have not seen come first, then the ones you got wrong. No question repeats.
+- **Infinite practice:** works through the whole bank. Questions you have not seen come first, then the ones you got wrong. No question repeats.
 - **Answer history:** practice modes favour questions you have not answered yet or got wrong last time.
 - **Ask about a question:** copies the question, your answer and its context, ready to paste into a chat assistant.
 

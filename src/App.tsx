@@ -40,7 +40,7 @@ import FormattedText, { FormattedExplanation } from "./components/FormattedText"
 import QuestionBody from "./components/questions/QuestionBody";
 import {
   AnswerHistory,
-  endlessQueue,
+  infiniteQueue,
   loadHistory,
   pickPracticeQuestions,
   recordResults,
@@ -66,7 +66,7 @@ const NEW_SESSION_LABELS: Record<ExamMode, string> = {
   MOCK_EXAM: "Start a new mock exam",
   QUICK_QUIZ: "Start a new quiz",
   DOMAIN_PRACTICE: "Practice this topic again",
-  ENDLESS: "Continue endless practice",
+  INFINITE: "Continue infinite practice",
 };
 
 const QUIZ_SIZES = [5, 10, 20, 30, 50];
@@ -76,7 +76,7 @@ const MODE_LABELS: Record<ExamMode, string> = {
   MOCK_EXAM: "Full Mock Exam",
   QUICK_QUIZ: "Quick Practice Quiz",
   DOMAIN_PRACTICE: "Topic Practice",
-  ENDLESS: "Endless Practice",
+  INFINITE: "Infinite Practice",
 };
 
 const slugify = (value: string) => value.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
@@ -368,9 +368,9 @@ export default function App() {
     } else if (mode === "QUICK_QUIZ") {
       selectedQuestionsList = pickPracticeQuestions(studyBank, answerHistory, shuffle, quizSize);
       setTimeLeft(0); // For practice, counts UP
-    } else if (mode === "ENDLESS") {
+    } else if (mode === "INFINITE") {
       // The whole bank once, never-answered questions first; the user ends the session whenever they like.
-      selectedQuestionsList = endlessQueue(studyBank, answerHistory, shuffle);
+      selectedQuestionsList = infiniteQueue(studyBank, answerHistory, shuffle);
       setTimeLeft(0);
     } else if (mode === "DOMAIN_PRACTICE" && domainFilter) {
       selectedQuestionsList = pickPracticeQuestions(
@@ -496,9 +496,9 @@ export default function App() {
   const submitExam = () => {
     if (!session) return;
 
-    // Endless practice ends whenever the user stops: only the questions they answered are scored and reviewed.
+    // Infinite practice ends whenever the user stops: only the questions they answered are scored and reviewed.
     const graded =
-      session.mode === "ENDLESS"
+      session.mode === "INFINITE"
         ? session.questions.filter((q) => isAnswered(q, session.userAnswers[q.id], presentationOf(q)))
         : session.questions;
     if (graded.length === 0) {
@@ -776,17 +776,17 @@ export default function App() {
                           Untimed
                         </span>
                       </div>
-                      <h3 className="font-bold text-gray-900 text-md mb-1">Endless Practice</h3>
+                      <h3 className="font-bold text-gray-900 text-md mb-1">Infinite Practice</h3>
                       <p className="text-xs text-gray-600 leading-relaxed mb-4">
                         Every question in the bank, one after another, each at most once: questions you have never answered first, then
                         the ones you got wrong, then the rest, oldest first. Stop whenever you like; the review covers what you answered.
                       </p>
                     </div>
                     <button
-                      onClick={() => startNewSession("ENDLESS")}
+                      onClick={() => startNewSession("INFINITE")}
                       className="w-full py-2.5 bg-white border border-gray-300 hover:border-[#FF694B] hover:text-[#FF694B] text-gray-700 rounded-lg text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-2 cursor-pointer transition-colors"
                     >
-                      <InfinityIcon className="w-3.5 h-3.5" /> Start Endless Practice
+                      <InfinityIcon className="w-3.5 h-3.5" /> Start Infinite Practice
                     </button>
                   </div>
 
@@ -982,14 +982,14 @@ export default function App() {
               <button
                 onClick={() => {
                   const prompt =
-                    session.mode === "ENDLESS"
-                      ? "End endless practice and see the results for the questions you answered?"
+                    session.mode === "INFINITE"
+                      ? "End infinite practice and see the results for the questions you answered?"
                       : "Are you sure you want to end your exam session and submit responses for evaluation?";
                   if (confirm(prompt)) submitExam();
                 }}
                 className="px-4 py-1.5 bg-red-600 hover:bg-red-700 text-white rounded text-xs font-semibold uppercase tracking-wider transition-colors cursor-pointer"
               >
-                {session.mode === "ENDLESS" ? "End & Review" : "Submit & End"}
+                {session.mode === "INFINITE" ? "End & Review" : "Submit & End"}
               </button>
             </div>
           </header>

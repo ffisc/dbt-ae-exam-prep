@@ -56,10 +56,10 @@ export function statusOf(history: AnswerHistory, questionId: number): QuestionSt
 }
 
 /**
- * Orders the whole pool for endless practice, each question once: never answered first (in random order),
+ * Orders the whole pool for infinite practice, each question once: never answered first (in random order),
  * then last answered wrong (in random order), then last answered correctly, least recently answered first.
  */
-export function endlessQueue(pool: Question[], history: AnswerHistory, shuffle: <T>(items: T[]) => T[]): Question[] {
+export function infiniteQueue(pool: Question[], history: AnswerHistory, shuffle: <T>(items: T[]) => T[]): Question[] {
   const unseen = shuffle(pool.filter((q) => statusOf(history, q.id) === "unseen"));
   const wrong = shuffle(pool.filter((q) => statusOf(history, q.id) === "wrong"));
   const correct = pool

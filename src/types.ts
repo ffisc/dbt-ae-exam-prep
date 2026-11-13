@@ -82,7 +82,7 @@ export type Answer =
   | { kind: "lines"; picks: number[] }
   | { kind: "nodes"; picks: string[] };
 
-export type ExamMode = "MOCK_EXAM" | "DOMAIN_PRACTICE" | "QUICK_QUIZ" | "ENDLESS";
+export type ExamMode = "MOCK_EXAM" | "DOMAIN_PRACTICE" | "QUICK_QUIZ" | "INFINITE";
 
 export interface ExamSession {
   id: string;
